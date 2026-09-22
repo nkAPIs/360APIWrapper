@@ -10,7 +10,7 @@ Skal IKKE indgå i et automatisk/ubemandet job - se scripts/robot_job.py
 for det formål.
 
 Kør fra repo-roden:
-    python scripts/bootstrap_once.py
+    uv run python scripts/bootstrap_once.py
 """
 
 from src.public360_client import Public360Client

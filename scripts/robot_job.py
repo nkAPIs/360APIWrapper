@@ -7,7 +7,7 @@ den forudsætter, at bootstrap_once.py allerede er kørt, og at
 TOKEN_STORAGE_PATH peger på den offline-token-fil, det producerede.
 
 Kør fra repo-roden, fx via cron/scheduler:
-    python scripts/robot_job.py
+    uv run python scripts/robot_job.py
 """
 
 import sys

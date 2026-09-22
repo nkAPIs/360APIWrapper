@@ -1,0 +1,8 @@
+[project]
+name = "360apiwrapper"
+version = "0.1.0"
+description = "Public 360 API client and integration scripts"
+requires-python = ">=3.13"
+dependencies = [
+    "requests>=2.34.2",
+]

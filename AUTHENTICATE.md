@@ -59,10 +59,12 @@ interaktivt browser-login under bootstrap (trin 5), foretaget af en FK-servicebr
 ## 4. Forbered miljøet
 
 ```bash
-pip install requests
+uv sync
 ```
 
-`src/public360_client.py` kræver ingen andre afhængigheder.
+`src/public360_client.py` kræver ingen andre afhængigheder end `requests`, som `uv sync` installerer
+i et lokalt `.venv` ud fra `pyproject.toml`/`uv.lock`. Kør scripts med `uv run`, fx `uv run python
+scripts/bootstrap_once.py`.
 
 ## 5. Kør bootstrap (engangs, kræver en person ved tasterne)
 
@@ -145,7 +147,7 @@ evigt (eller indtil den bliver ugyldig). De to roller bør leve i hver sit scrip
 1. **Kør bootstrap manuelt, én gang**, på en maskine hvor du kan åbne en browser:
 
    ```bash
-   python scripts/bootstrap_once.py
+   uv run python scripts/bootstrap_once.py
    ```
 
    Dette logger dig ind via FK Adgangsstyring og gemmer offline-tokenet i en fil.
@@ -158,7 +160,7 @@ evigt (eller indtil den bliver ugyldig). De to roller bør leve i hver sit scrip
    det gemte offline token til et frisk access-token ved hvert kald:
 
    ```bash
-   python scripts/robot_job.py
+   uv run python scripts/robot_job.py
    ```
 
    Sæt dette op i jeres scheduler (cron, Task Scheduler, Kubernetes CronJob osv.) som et helt
@@ -187,7 +189,7 @@ næste kørsel.
 
 ## 9. Hvornår skal I re-bootstrappe?
 
-Kør `python scripts/bootstrap_once.py` (eller `client.bootstrap()`) igen, hvis:
+Kør `uv run python scripts/bootstrap_once.py` (eller `client.bootstrap()`) igen, hvis:
 
 - Token-exchange fejler med `invalid_grant` (tokenet er ugyldigt, udløbet eller tilbagekaldt) — klienten
   kaster i så fald en `Public360AuthError` med denne besked.
