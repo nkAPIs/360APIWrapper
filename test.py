@@ -32,17 +32,12 @@ ENVIRONMENTS = {
     "test": {
         "realm_url": "https://keycloak.360online.com/realms/naestved-test",
         "client_id": "naestved-test__edoc-api-bootstrap-cli",
-        # TODO: confirm the actual TEST tenant hostname with Tieto if this differs.
         "tenant_host": "naestved.public360online.com",
         "token_storage_path": "./naestved-test-offline-token.local.json",
     },
     "prod": {
         "realm_url": "https://keycloak.360online.com/realms/naestved",
-        # NOTE: Tieto supplied the same client id for both TEST and PROD.
-        # Double-check this is intentional - normally each environment
-        # gets its own bootstrap client id.
-        "client_id": "naestved-test__edoc-api-bootstrap-cli",
-        # TODO: confirm the actual PROD tenant hostname with Tieto if this differs.
+        "client_id": "naestved__edoc-api-bootstrap-cli",
         "tenant_host": "naestved.public360online.com",
         "token_storage_path": "./naestved-prod-offline-token.local.json",
     },
