@@ -305,6 +305,71 @@ class Public360Client:
     def post(self, path: str, **kwargs) -> requests.Response:
         return self.call_api("POST", path, **kwargs)
 
+    # ------------------------------------------------------------------
+    # CaseService
+    # ------------------------------------------------------------------
+    def get_cases(
+        self,
+        cpr_number: Optional[str] = None,
+        case_type: Optional[str] = None,
+        max_returned_cases: int = 100,
+        page: Optional[int] = None,
+        sort_criterion: Optional[str] = None,
+        **extra_query,
+    ) -> dict:
+        """
+        Search for cases via CaseService/GetCases.
+
+        Args:
+            cpr_number: The citizen's CPR number (personal id number). Maps
+                to the GetCasesQuery "ContactReferenceNumber" field, which
+                searches case-contact relations for a private person (or an
+                enterprise, via CVR/EnterpriseNumber) with this value.
+            case_type: The case type to filter by. Either a 360 code value
+                (e.g. "Sak") or a recno reference (e.g. "recno:2"). Maps to
+                the GetCasesQuery "CaseType" field.
+            max_returned_cases: Max number of cases to return. Default 100.
+            page: Pagination page number. Use together with
+                sort_criterion for a stable result order across pages.
+            sort_criterion: "RecnoAscending" or "RecnoDescending". Should
+                be set whenever `page` is used.
+            **extra_query: Any other GetCasesQuery field to pass through
+                as-is (e.g. Recno, CaseNumber, ArchiveCode, LastDate,
+                IncludeCaseContacts). See the SIF API documentation,
+                chapter "7.3 GetCases", for the full list of fields.
+
+        Returns:
+            The parsed JSON GetCasesResult, e.g. {"Cases": [...],
+            "TotalCount": ..., "Successful": ..., ...}.
+
+        Raises:
+            ValueError: if no search criterion was supplied at all
+                (GetCases requires at least one).
+        """
+        if not cpr_number and not case_type and not extra_query:
+            raise ValueError(
+                "get_cases requires at least one search criterion "
+                "(cpr_number, case_type, or another GetCasesQuery field "
+                "passed via extra_query)."
+            )
+
+        query: dict = {"MaxReturnedCases": max_returned_cases}
+        if cpr_number:
+            query["ContactReferenceNumber"] = cpr_number
+        if case_type:
+            query["CaseType"] = case_type
+        if page is not None:
+            query["Page"] = page
+        if sort_criterion:
+            query["SortCriterion"] = sort_criterion
+        query.update(extra_query)
+
+        response = self.post(
+            "/Biz/v2/api/call/SI.Data.RPC/SI.Data.RPC/CaseService/GetCases",
+            json={"parameter": query},
+        )
+        return response.json()
+
 
 if __name__ == "__main__":
     # Values below come from Tieto (realm_url, client_id) and from your
