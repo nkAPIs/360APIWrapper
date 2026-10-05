@@ -4,5 +4,9 @@ version = "0.1.0"
 description = "Public 360 API client and integration scripts"
 requires-python = ">=3.13"
 dependencies = [
+    "nkconfighandler",
     "requests>=2.34.2",
 ]
+
+[tool.uv.sources]
+nkconfighandler = { git = "https://github.com/nkCommon/nkConfigHandler.git" }

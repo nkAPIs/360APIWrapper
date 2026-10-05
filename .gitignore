@@ -219,3 +219,6 @@ __marimo__/
 
 # 360 API offline tokens (equivalent to a password - never commit)
 *-offline-token.local.json
+.env
+*.ini
+

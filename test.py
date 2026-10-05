@@ -26,45 +26,53 @@ a password - do not commit them (already covered by .gitignore).
 import argparse
 import sys
 
+from src.config import get_configuration
 from src.public360_client import Public360AuthError, Public360Client
+from confighandler.src.configuration import Configuration
 
-ENVIRONMENTS = {
-    "test": {
-        "realm_url": "https://keycloak.360online.com/realms/naestved-test",
-        "client_id": "naestved-test__edoc-api-bootstrap-cli",
-        "tenant_host": "naestved.public360online.com",
-        "token_storage_path": "./naestved-test-offline-token.local.json",
-    },
-    "prod": {
-        "realm_url": "https://keycloak.360online.com/realms/naestved",
-        "client_id": "naestved__edoc-api-bootstrap-cli",
-        "tenant_host": "naestved.public360online.com",
-        "token_storage_path": "./naestved-prod-offline-token.local.json",
-    },
-}
+
+# ENVIRONMENTS = {
+#     "test": {
+#         "realm_url": "https://keycloak.360online.com/realms/naestved-test",
+#         "client_id": "naestved-test__edoc-api-bootstrap-cli",
+#         "tenant_host": "naestved.public360online.com",
+#         "token_storage_path": "./naestved-test-offline-token.local.json",
+#     },
+#     "prod": {
+#         "realm_url": "https://keycloak.360online.com/realms/naestved",
+#         "client_id": "naestved__edoc-api-bootstrap-cli",
+#         "tenant_host": "naestved.public360online.com",
+#         "token_storage_path": "./naestved-prod-offline-token.local.json",
+#     },
+# }
 
 # Read-only RPC call used to confirm the token/endpoint chain works.
 # Adjust with --api-path if AccessGroupService is not enabled on the
 # endpoint configured in 360 web admin.
-DEFAULT_API_PATH = "/Biz/v2/api/call/SI.Data.RPC/SI.Data.RPC/AccessGroupService/GetAccessGroups"
+# DEFAULT_API_PATH = "/Biz/v2/api/call/SI.Data.RPC/SI.Data.RPC/AccessGroupService/GetAccessGroups"
 
 
-def run_test(env_name: str, api_path: str) -> int:
+def run_test(env_name: str, api_path: str=None) -> int:
     # Step 1: look up the realm/client/tenant config for the chosen
     # environment (ENVIRONMENTS above) and build a client around it.
     # Nothing is sent over the network yet - this just prepares the
     # client with the values needed for later requests.
-    config = ENVIRONMENTS[env_name]
+    # config = ENVIRONMENTS[env_name]
+    config = get_configuration()
+
+    if api_path is None:
+        api_path = config.DEFAULT_API_PATH
+    
     client = Public360Client(
-        realm_url=config["realm_url"],
-        client_id=config["client_id"],
-        tenant_host=config["tenant_host"],
-        token_storage_path=config["token_storage_path"],
+        realm_url=config.realm_url,
+        client_id=config.client_id,
+        tenant_host=config.tenant_host,
+        token_storage_path=config.token_storage_path,
     )
 
-    print(f"[{env_name}] realm: {config['realm_url']}")
-    print(f"[{env_name}] client_id: {config['client_id']}")
-    print(f"[{env_name}] tenant: {config['tenant_host']}")
+    print(f"[{env_name}] realm: {config.realm_url}")
+    print(f"[{env_name}] client_id: {config.client_id}")
+    print(f"[{env_name}] tenant: {config.tenant_host}")
 
     # Step 2: check whether we already have an offline token cached on
     # disk from a previous run (config["token_storage_path"]). If not,
@@ -86,9 +94,10 @@ def run_test(env_name: str, api_path: str) -> int:
     # refresh_token grant, attach it as "Authorization: Bearer ..." on
     # the request, and retry automatically on 401/429/5xx per the
     # integration guide's baseline (see public360_client.py).
-    print(f"[{env_name}] calling {api_path} ...")
+    #print(f"[{env_name}] calling {api_path} ...")
+    print(f"pinging ...")
     try:
-        response = client.post(api_path, json={})
+        response = client.ping()
     except Public360AuthError as exc:
         # The offline token was rejected (revoked/expired/etc). There is
         # no automatic recovery - a human must re-run bootstrap().
@@ -120,7 +129,7 @@ def main() -> int:
     # args = parser.parse_args()
 
     # return run_test(args.env, args.api_path)    
-    return run_test("test", DEFAULT_API_PATH)
+    return run_test("prod", api_path=None)
 
 
 

@@ -305,6 +305,15 @@ class Public360Client:
     def post(self, path: str, **kwargs) -> requests.Response:
         return self.call_api("POST", path, **kwargs)
 
+    def ping(self, service: str = "CaseService") -> None:
+        """
+        Call Ping() on the given service endpoint to confirm connectivity:
+        that the access token is valid, the service is reachable and
+        correctly installed, and your user has at least read access to
+        360. Raises on failure; returns None on success.
+        """
+        return self.post(f"/Biz/v2/api/call/SI.Data.RPC/SI.Data.RPC/{service}/Ping", json={"parameter": {}})
+
     # ------------------------------------------------------------------
     # CaseService
     # ------------------------------------------------------------------
