@@ -29,7 +29,7 @@ import sys
 from src.config import get_configuration
 from src.public360_client import Public360AuthError, Public360Client
 from confighandler.src.configuration import Configuration
-
+from src.public360_client import AccessGroup, CaseStatus, CaseType
 
 # ENVIRONMENTS = {
 #     "test": {
@@ -58,7 +58,7 @@ def run_test(env_name: str, api_path: str=None) -> int:
     # Nothing is sent over the network yet - this just prepares the
     # client with the values needed for later requests.
     # config = ENVIRONMENTS[env_name]
-    config = get_configuration()
+    config = get_configuration(debugmode=True if env_name == "test" else False)
 
     if api_path is None:
         api_path = config.DEFAULT_API_PATH
@@ -67,7 +67,8 @@ def run_test(env_name: str, api_path: str=None) -> int:
         realm_url=config.realm_url,
         client_id=config.client_id,
         tenant_host=config.tenant_host,
-        token_storage_path=config.token_storage_path,
+        token=config.token
+        #token_storage_path=config.token_storage_path,
     )
 
     print(f"[{env_name}] realm: {config.realm_url}")
@@ -81,12 +82,12 @@ def run_test(env_name: str, api_path: str=None) -> int:
     # a browser for you to log in via FK Adgangsstyring, and - once you
     # complete that login - stores the resulting offline token to disk.
     # This is the only step that requires a human in the loop.
-    try:
-        client._load_offline_token()
-        print(f"[{env_name}] existing offline token found, skipping bootstrap.")
-    except Public360AuthError:
-        print(f"[{env_name}] no offline token found, starting bootstrap (browser will open)...")
-        client.bootstrap()
+    # # # # try:
+    # # # #     client._load_offline_token()
+    # # # #     print(f"[{env_name}] existing offline token found, skipping bootstrap.")
+    # # # # except Public360AuthError:
+    # # # #     print(f"[{env_name}] no offline token found, starting bootstrap (browser will open)...")
+    # # # #     client.bootstrap()
 
     # Step 3: make one API call to prove the chain works end-to-end.
     # Under the hood, client.post() will: load the offline token,
@@ -108,7 +109,33 @@ def run_test(env_name: str, api_path: str=None) -> int:
     # actually reached 360 and got real data back, not just a 200.
     print(f"[{env_name}] OK - HTTP {response.status_code}")
     print(response.json())
+    
+    
+    
+
+    result = client.create_case(
+        title="Testing API - Kan SLETTES",
+        case_type=CaseType.ADMINISTRATIVSAG,
+        # TODO(sensitivity): placeholder value - confirm the valid
+        # "Følsomhed" values with the 360 admin / Tietoevry and swap this
+        # for a real one (see Public360Client.create_case's docstring and
+        # SENSITIVITY_FIELD_NAME in src/public360_client.py).
+        sensitivity="TODO",
+        # The default status (recno 5 / CaseStatus.B) is not valid for
+        # this case type - 360 rejects it with "The selected Case Status
+        # is not valid for the Case Type". CaseStatus.A ("Aktiv") is a
+        # guess at a valid alternative; swap it for whichever status 360
+        # web admin has configured as allowed for CaseType.ADMINISTRATIVSAG
+        # if this still fails.
+        status=CaseStatus.A,
+        access_group=AccessGroup.AABEN_FOR_ALLE,  # "Public" is not a valid AccessGroup code in this tenant
+    )
+
+    print(result["CaseNumber"], result["Recno"])
+    
+    
     return 0
+
 
 
 def main() -> int:
