@@ -25,11 +25,82 @@ a password - do not commit them (already covered by .gitignore).
 
 import argparse
 import sys
-
+from xmlrpc import client
+import json
 from src.config import get_configuration
-from src.public360_client import Public360AuthError, Public360Client
+from src.public360_client import Public360AuthError, Public360Client, DocumentCategory,DocumentStatus
 from confighandler.src.configuration import Configuration
 from src.public360_client import AccessGroup, CaseStatus, CaseType
+from random import *
+from pathlib import Path
+
+def get_document_stuff(client):
+    doc_result = client.get_document_categories()
+    print(json.dumps(doc_result, indent=4))
+    for cat in doc_result:
+        print(f"{cat['Code']} # {cat['Description']} # {cat['Recno']}")
+    
+    doc_result = client.get_document_statuses()
+    print(json.dumps(doc_result, indent=4))
+    for cat in doc_result:
+        print(f"{cat['Code']} # {cat['Description']} # {cat['Recno']}")
+
+def get_cases_test(client):
+    print("#####################################################################################################")
+    res = client.sif_call("CaseService", "GetCases", { "CaseNumber":"85.15.00-P20-4-21S"})  # your existing case
+    case = res["Cases"][0]
+
+    keys = ["CaseType", "Status", "AccessCode", "AccessGroup", "Paragraph",
+            "ResponsiblePersonRecno", "ResponsiblePersonInitials",
+            "ResponsibleEnterpriseRecno", "ResponsibleEnterprise"]
+    for k in keys:
+        print(k, "=", case.get(k))
+    print("#####################################################################################################")
+    print("#####################################################################################################")
+    res = client.sif_call("CaseService", "GetCases", { "Title":"Testsag oprettet via SIF API 3"})  # your existing case
+    case = res["Cases"][0]
+
+    keys = ["CaseType", "Status", "AccessCode", "AccessGroup", "Paragraph",
+            "ResponsiblePersonRecno", "ResponsiblePersonInitials",
+            "ResponsibleEnterpriseRecno", "ResponsibleEnterprise"]
+    for k in keys:
+        print(k, "=", case.get(k))
+
+    print(case['ResponsiblePerson'])
+
+    print("#####################################################################################################")
+
+def create_case_test(client, filename:str=None):
+    
+    
+    r = client.create_case(
+                    title=f"Testsag oprettet via SIF API-{randint(1,100)}-LKKA",
+                    responsible_recno=527919,      # Lars Kasper
+                    case_type="recno:300001",
+                    status="recno:300001",
+                    archive_codes=[
+                        (f"recno:500708", "85.15.00"),   # Recno of the right 85.15.XX row
+                        ("Facet",       "G01"),        # use recno:… here too if Facet is also ambiguous
+                    ],    )
+    
+   
+    print(r)
+
+    if filename:
+        doc = client.create_document(
+            title=Path(filename).name,
+            case_number=r["CaseNumber"],
+            filepath=filename,
+            category=DocumentCategory.INTERNT,
+            status=DocumentStatus.K,
+            responsible_recno=527919,
+        )
+        print(doc)
+
+    check = client.sif_call("CaseService", "GetCases", {"Recno": r["Recno"]})
+    print(json.dumps(check, indent=2, ensure_ascii=False)[:2000])
+
+
 
 # ENVIRONMENTS = {
 #     "test": {
@@ -110,30 +181,104 @@ def run_test(env_name: str, api_path: str=None) -> int:
     print(f"[{env_name}] OK - HTTP {response.status_code}")
     print(response.json())
     
-    
-    
+   
+    get_document_stuff(client) 
 
-    result = client.create_case(
-        title="Testing API - Kan SLETTES",
-        case_type=CaseType.ADMINISTRATIVSAG,
-        # TODO(sensitivity): placeholder value - confirm the valid
-        # "Følsomhed" values with the 360 admin / Tietoevry and swap this
-        # for a real one (see Public360Client.create_case's docstring and
-        # SENSITIVITY_FIELD_NAME in src/public360_client.py).
-        sensitivity="TODO",
-        # The default status (recno 5 / CaseStatus.B) is not valid for
-        # this case type - 360 rejects it with "The selected Case Status
-        # is not valid for the Case Type". CaseStatus.A ("Aktiv") is a
-        # guess at a valid alternative; swap it for whichever status 360
-        # web admin has configured as allowed for CaseType.ADMINISTRATIVSAG
-        # if this still fails.
-        status=CaseStatus.A,
-        access_group=AccessGroup.AABEN_FOR_ALLE,  # "Public" is not a valid AccessGroup code in this tenant
-    )
+    get_cases_test(client)    
+    create_case_test(client, filename="/Users/lakas/git/DataProccesor/README.pdf")
 
-    print(result["CaseNumber"], result["Recno"])
+    print("********* END TEST **************************")    
+    # res = client.sif_call("CaseService", "GetCases", {"Recno": 804386})
+    # print(json.dumps(res, indent=2, ensure_ascii=False)[:4000])
+    
+    #   # later, look it back up by that same key:
+    # result = client.get_cases(external_id="12300004444", external_id_type="AcmeSystem")
+    result = client.sif_call("CaseService", "GetCases", { 
+                                                         "CaseNumber":"85.15.00-P20-4-21S"
+                                                        })
+    # classification codes.
+    print("classification codes.#################################################################################")
+    res = client.sif_call("SupportService", "GetCodeTableRows",
+               {"CodeTableName": "Noark Classification type"})
     
     
+    # Show the raw response once so we know the structure
+    print(json.dumps(res, indent=2, ensure_ascii=False)[:1500])
+
+
+    # case types
+    print("case types.#################################################################################")
+    res = client.sif_call("SupportService", "GetCodeTableRows",
+                {"CodeTableName": "code table: Case type"})
+    print(json.dumps(res, indent=2, ensure_ascii=False)[:3000])
+
+    # Status
+    print("Status.#################################################################################")
+    res = client.sif_call("SupportService", "GetCodeTableRows",
+               {"CodeTableName": "code table: Case status"})
+    for row in res.get("CodeTableRows", []):
+        if not row.get("IsExpired"):
+            print(row["Recno"], "|", row["Code"], "|", row["Description"])
+
+
+    
+    print("archive codes .#################################################################################")
+    rows = res.get("CodeTableRows") or res.get("Rows") or []
+    for row in rows:
+        if row.get("Code") == "85.15.XX":
+            print(row.get("Recno"), "|", row.get("Code"), "|", row.get("Description"))
+    
+    
+    
+    
+    
+    case = result["Cases"][0]
+    for k, v in case.items():
+        if "type" in k.lower():
+            print(k, "=", v)
+   # print(json.dumps(case, indent=4, ensure_ascii=False))
+    print(json.dumps(case.get("ArchiveCodes"), indent=2, ensure_ascii=False))
+
+
+
+    for recno in[500708]:
+        try:
+            result = client.create_case(
+                title="Testsag oprettet via SIF API",
+                responsible_recno=637056,          # Recno of the case handler
+                case_type="recno:300001",
+                status="recno:300001",
+                archive_codes=[
+                    (f"recno:{recno}", "85.15.00"),   # Recno of the right 85.15.XX row
+                    ("Facet",       "P20"),        # use recno:… here too if Facet is also ambiguous
+                ],    )
+            
+            print("Created case:", result.get("CaseNumber"), "Recno:", result.get("Recno"))
+            print(json.dumps(result, indent=4, ensure_ascii=False))
+        except Exception as e:
+            print("EXCEPTION: ***************************************************************************")
+            print(e)
+ 
+    #print(sif_call("CaseService", "GetCases", {"CaseNumber": result.get("CaseNumber")}))
+    
+    ## 161026-- Created case: None Recno: 804383
+    ## Created case: None Recno: 804386
+    # Created case: None Recno: 804386
+    # {
+    #     "Recno": 804386,
+    #     "CaseNumber": null,
+    #     "ImportedCaseNumber": null,
+    #     "UID": null,
+    #     "UIDOrigin": null,
+    #     "URL": null,
+    #     "Successful": true,
+    #     "ErrorMessage": "",
+    #     "ErrorDetails": null
+    # }
+
+
+
+
     return 0
 
 
@@ -156,7 +301,7 @@ def main() -> int:
     # args = parser.parse_args()
 
     # return run_test(args.env, args.api_path)    
-    return run_test("prod", api_path=None)
+    return run_test("test", api_path=None)
 
 
 

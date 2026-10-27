@@ -19,6 +19,7 @@ import stat
 import time
 import webbrowser
 from enum import Enum
+from pathlib import Path
 from typing import Optional, Union
 
 import requests
@@ -270,6 +271,84 @@ class CaseStatus(str, Enum):
     SOM = "recno:500177"  # Code='SOM' -- Supplerende oplysninger modtaget
     AFA = "recno:500178"  # Code='AFA' -- Afgjort - Afslag
     AFVE = "recno:500179"  # Code='AFVE' -- Afventer
+
+
+class DocumentCategory(str, Enum):
+    """
+    Active rows of the Naestved 360 tenant's "Document category" code
+    table, for use as the `category` argument to
+    Public360Client.create_document(). Values are "recno:<n>". Member
+    names are derived from Code, with Danish letters transliterated
+    (å=AA, ø=OE, æ=AE).
+
+    Fetched via Public360Client.get_document_categories() on 2026-10-27.
+    This list is tenant-specific and can change when 360 admin
+    reconfigures the code table - re-run that call to refresh it.
+    """
+
+    INDGAAENDE = "recno:110"  # Code='Indgående'
+    UDGAAENDE = "recno:111"  # Code='Udgående'
+    HAANDBOG = "recno:120"  # Code='Håndbog'
+    INSTRUKS = "recno:121"  # Code='Instruks'
+    PROCEDURE = "recno:122"  # Code='Procedure'
+    SKEMA = "recno:123"  # Code='Skema'
+    PLAN = "recno:124"  # Code='Plan'
+    KONTRAKT = "recno:125"  # Code='Kontrakt'
+    SVAR_PAA_AKTINDSIGT = "recno:127"  # Code='Svar på aktindsigt'
+    RUTINE = "recno:305"  # Code='Rutine'
+    ANMODNING_OM_AKTINDSIGT_I = "recno:311"  # Code='Anmodning om aktindsigt i'
+    HISTORISK_DOKUMENT_FRA_EARKIV = "recno:314"  # Code='Historisk dokument fra eArkiv'
+    OVERSIGT_SAGSNOTER = "recno:342"  # Code='Oversigt sagsnoter'
+    AKTINDSIGTSRAPPORT = "recno:379"  # Code='Aktindsigtsrapport'
+    AKTINDSIGTSKOPI = "recno:380"  # Code='Aktindsigtskopi'
+    HOERING_OG_OFFENTLIG_INSPEKTION = "recno:391"  # Code='Høring og offentlig inspektion'
+    YDERLIGERE_INFORMATION_MINDRE_MANGEL = "recno:433"  # Code='Yderligere information - Mindre mangel'
+    YDERLIGERE_INFORMATION_VAESENTLIG_MANGEL = "recno:434"  # Code='Yderligere information - Væsentlig mangel'
+    HOERINGSSVAR = "recno:435"  # Code='Høringssvar'
+    KOMMENTAR = "recno:436"  # Code='Kommentar'
+    MANGELBREV_MINDRE_MANGEL = "recno:437"  # Code='Mangelbrev - Mindre mangel'
+    MANGELBREV_VAESENTLIG_MANGEL = "recno:438"  # Code='Mangelbrev - Væsentlig mangel'
+    BEKENDTGOERELSE = "recno:439"  # Code='Bekendtgørelse'
+    INTERNT = "recno:60005"  # Code='Internt'
+    BESLUTNINGSDOKUMENT = "recno:60006"  # Code='Beslutningsdokument' -- Beslutning (MU)
+    PERSONALEHAANDBOG = "recno:95509"  # Code='Personalehåndbog'
+    INDKOMMENDE_DOKUMENT_UDEN_OPFOELGNING = "recno:95564"  # Code='Indkommende dokument (uden opfølgning)'
+    BESLUTNINGSBREV = "recno:99002"  # Code='Beslutningsbrev'
+    ANSOEGNING = "recno:99012"  # Code='Ansøgning'
+    INDSIGELSE = "recno:99050"  # Code='Indsigelse'
+    AKTINDSIGTSDOKUMENT = "recno:300054"  # Code='Aktindsigtsdokument'
+    JOURNALNOTE = "recno:300087"  # Code='Journalnote'
+    MEMO_AFSENDELSE = "recno:320011"  # Code='MeMo-afsendelse'
+
+
+class DocumentStatus(str, Enum):
+    """
+    Active rows of the Naestved 360 tenant's "Journal status" code table
+    (a document's Status field), for use as the `status` argument to
+    Public360Client.create_document(). Values are "recno:<n>". Member
+    names are derived from Code; the trailing comment is the Description.
+
+    Fetched via Public360Client.get_document_statuses() on 2026-10-27.
+    This list is tenant-specific and can change when 360 admin
+    reconfigures the code table - re-run that call to refresh it.
+    """
+
+    K = "recno:1"  # Code='K' -- Kladde
+    M = "recno:2"  # Code='M' -- Midlertidig journalført af arkivet
+    R = "recno:3"  # Code='R' -- Registreret i første hånd eller ajourført af sagsbehandler/leder
+    F = "recno:4"  # Code='F' -- Færdig fra sagsbehandler/leder og klargjort for afsendelse
+    V = "recno:5"  # Code='V' -- Videresendt
+    E = "recno:6"  # Code='E' -- Endelig
+    A = "recno:7"  # Code='A' -- Registrering afsluttet, arkiveksemplar tilgængelig
+    D = "recno:8"  # Code='D' -- Slettet
+    S = "recno:9"  # Code='S' -- Sendt til godkendelse
+    G = "recno:10"  # Code='G' -- Godkendt
+    I = "recno:11"  # Code='I' -- Ikke godkendt
+    T = "recno:12"  # Code='T' -- Til kommentering
+    SIGNERET = "recno:14"  # Code='Signeret' -- Signeret
+    KA = "recno:16"  # Code='KA' -- Kasseret
+    KK = "recno:17"  # Code='KK' -- Klar til kassation
+    US = "recno:18"  # Code='US' -- Under signering
 
 
 class Public360Client:
@@ -598,6 +677,33 @@ class Public360Client:
         )
         return response.json()
 
+    def get_document_categories(
+        self, include_expired_values: bool = False
+    ) -> list[dict]:
+        """
+        Rows of the "Document category" code table, for create_document's
+        `category` argument. Use "recno:<Recno>" as the value.
+        """
+        result = self.get_code_table_rows(
+            "code table: Document category",
+            include_expired_values=include_expired_values,
+        )
+        return result.get("CodeTableRows", [])
+
+    def get_document_statuses(
+        self, include_expired_values: bool = False
+    ) -> list[dict]:
+        """
+        Rows of the "Journal status" code table (a document's Status
+        field), for create_document's `status` argument. Use
+        "recno:<Recno>" as the value.
+        """
+        result = self.get_code_table_rows(
+            "code table: Journal status",
+            include_expired_values=include_expired_values,
+        )
+        return result.get("CodeTableRows", [])
+
     def ping(self, service: str = "CaseService") -> None:
         """
         Call Ping() on the given service endpoint to confirm connectivity:
@@ -614,6 +720,8 @@ class Public360Client:
         self,
         cpr_number: Optional[str] = None,
         case_type: Optional[Union[str, CaseType]] = None,
+        external_id: Optional[str] = None,
+        external_id_type: Optional[str] = None,
         max_returned_cases: int = 100,
         page: Optional[int] = None,
         sort_criterion: Optional[str] = None,
@@ -630,6 +738,14 @@ class Public360Client:
             case_type: The case type to filter by. Either a 360 code value
                 (e.g. "Sak") or a recno reference (e.g. "recno:2"). Maps to
                 the GetCasesQuery "CaseType" field.
+            external_id: ID of this case in another (non-360) system, as
+                previously set via create_case()'s external_id. Maps to
+                the GetCasesQuery "ExternalId" field (an
+                ExternalIdParameter {"Id": ..., "Type": ...}). Must be
+                given together with external_id_type.
+            external_id_type: Name of the other system that external_id
+                belongs to (e.g. "Visma"). Maps to ExternalIdParameter's
+                "Type".
             max_returned_cases: Max number of cases to return. Default 100.
             page: Pagination page number. Use together with
                 sort_criterion for a stable result order across pages.
@@ -646,13 +762,19 @@ class Public360Client:
 
         Raises:
             ValueError: if no search criterion was supplied at all
-                (GetCases requires at least one).
+                (GetCases requires at least one), or if only one of
+                external_id/external_id_type was given.
         """
-        if not cpr_number and not case_type and not extra_query:
+        if bool(external_id) != bool(external_id_type):
+            raise ValueError(
+                "get_cases requires both external_id and external_id_type "
+                "together, not just one of them."
+            )
+        if not cpr_number and not case_type and not external_id and not extra_query:
             raise ValueError(
                 "get_cases requires at least one search criterion "
-                "(cpr_number, case_type, or another GetCasesQuery field "
-                "passed via extra_query)."
+                "(cpr_number, case_type, external_id, or another "
+                "GetCasesQuery field passed via extra_query)."
             )
 
         query: dict = {"MaxReturnedCases": max_returned_cases}
@@ -660,6 +782,8 @@ class Public360Client:
             query["ContactReferenceNumber"] = cpr_number
         if case_type:
             query["CaseType"] = case_type
+        if external_id:
+            query["ExternalId"] = {"Id": external_id, "Type": external_id_type}
         if page is not None:
             query["Page"] = page
         if sort_criterion:
@@ -672,133 +796,407 @@ class Public360Client:
         )
         return response.json()
 
-    def create_case(
+#     def create_case(
+#         self,
+#         title: str,
+#         case_type: Union[str, CaseType]=None,
+#         sensitivity: str=None,
+#         unofficial_title: Optional[str] = None,
+#         status: Optional[Union[str, CaseStatus]] = None,
+#         access_code: Optional[str] = None,
+#         access_group: Optional[Union[str, AccessGroup]] = None,
+#         journal_unit: Optional[str] = None,
+#         sub_archive: Optional[str] = None,
+#         external_id: Optional[str] = None,
+#         external_id_type: Optional[str] = None,
+#         responsible_person_id_number: Optional[str] = None,
+#         responsible_person_recno: Optional[str] = None,
+#         responsible_person_email: Optional[str] = None,
+#         responsible_person_user_id: Optional[str] = None,
+#         **extra_fields,
+#     ) -> dict:
+#         """
+#         Create a case (CaseType "Sak"/Noark Sak) via CaseService/CreateCase.
+
+#         `case_type` and `sensitivity` are mandatory here (even though SIF
+#         itself treats both as optional) because, in the Naestved tenant,
+#         omitting either one is guaranteed to make 360 reject the insert:
+#         the generic default case_type (recno 2) is expired in this tenant,
+#         and the eDoc event handler
+#         EventHandlerWhenCaseOrDocSensitivityIsMandatory rejects any Case
+#         (or Document) insert that doesn't carry a sensitivity value, with
+#         "Der er ikke angivet noget følsomhed" ("no sensitivity specified").
+
+#         Args:
+#             title: Case description. Maps to the CreateCaseParameter
+#                 "Title" field. Mandatory.
+#             case_type: Code value, recno, or a CaseType member (e.g.
+#                 CaseType.ADMINISTRATIVE_CASE). Maps to "CaseType".
+#             sensitivity: The case's "Følsomhed"/sensitivity classification,
+#                 required by this tenant's EventHandlerWhenCaseOrDocSensitivityIsMandatory
+#                 rule. Sent as an AdditionalFieldParameter named
+#                 SENSITIVITY_FIELD_NAME. NOT yet backed by a `Sensitivity`
+#                 enum: unlike CaseType/CaseStatus/AccessGroup, this is not a
+#                 360 code table (confirmed empirically - see
+#                 SENSITIVITY_FIELD_NAME's comment) and its valid values
+#                 and exact field Name still need confirming with the 360
+#                 admin / Tietoevry. Pass the raw string value for now;
+#                 swap in an enum here once confirmed.
+#             unofficial_title: Maps to "UnofficialTitle". Defaults to
+#                 `title` in 360 if not set.
+#             status: Code value, recno, or a CaseStatus member (e.g.
+#                 CaseStatus.B for "Under behandling"). Maps to "Status".
+#                 Not every status is valid for every case_type - 360 will
+#                 reject the combination with "The selected Case Status is
+#                 not valid for the Case Type" if so; check 360 web admin
+#                 for the case type's allowed statuses. Closing statuses
+#                 require ArchiveCodes to also be set (pass via
+#                 extra_fields).
+#             access_code: Code value or recno. Maps to "AccessCode". Some
+#                 access codes require "Paragraph" to also be set (pass via
+#                 extra_fields).
+#             access_group: Code value, recno, or an AccessGroup member.
+#                 Maps to "AccessGroup".
+#             journal_unit: Code value or recno. Maps to "JournalUnit".
+#             sub_archive: Code value or recno. Maps to "SubArchive".
+#             external_id: ID of this case in another (non-360) system,
+#                 for later lookup via get_cases(external_id=...). Maps to
+#                 "ExternalId" (an ExternalIdParameter {"Id": ...,
+#                 "Type": ...}). Must be given together with
+#                 external_id_type.
+#             external_id_type: Name of the other system that external_id
+#                 belongs to (e.g. "Visma"). Maps to ExternalIdParameter's
+#                 "Type".
+#             responsible_person_id_number: External ID of the responsible
+#                 person. Maps to "ResponsiblePersonIdNumber". Provide only
+#                 one of the four responsible_person_* arguments.
+#             responsible_person_recno: Recno of the responsible person.
+#                 Maps to "ResponsiblePersonRecno".
+#             responsible_person_email: Email of the responsible person.
+#                 Maps to "ResponsiblePersonEmail".
+#             responsible_person_user_id: Username of the responsible person
+#                 (e.g. "no\\name.name"). Maps to "ResponsiblePersonUserId".
+#             **extra_fields: Any other CreateCaseParameter field to pass
+#                 through as-is (e.g. ArchiveCodes, Contacts, Keywords,
+#                 Category, Project, Remarks). See the SIF API
+#                 documentation, chapter "7.1 CreateCase", for the full
+#                 list of fields. Pass "AdditionalFields" here (a list of
+#                 {"Name": ..., "Value": ...} dicts) for any other custom
+#                 field besides sensitivity - it will be merged with the
+#                 sensitivity entry, not overwritten.
+
+#         Returns:
+#             The parsed JSON CaseOperationResult, e.g. {"Recno": ...,
+#             "CaseNumber": ..., "UID": ..., ...}.
+
+#         Raises:
+#             ValueError: if `title` or `sensitivity` is empty, or if only
+#                 one of external_id/external_id_type was given.
+#         """
+#         if not title:
+#             raise ValueError("create_case requires a non-empty title.")
+#         # if not sensitivity:
+#         #     raise ValueError("create_case requires a non-empty sensitivity.")
+#         if bool(external_id) != bool(external_id_type):
+#             raise ValueError(
+#                 "create_case requires both external_id and "
+#                 "external_id_type together, not just one of them."
+#             )
+
+#         additional_fields = list(extra_fields.pop("AdditionalFields", []))
+# #        additional_fields.append({"Name": SENSITIVITY_FIELD_NAME, "Value": sensitivity})
+
+#         parameter: dict = {
+#             "Title": title,
+#             #"CaseType": case_type,
+#             "AdditionalFields": additional_fields,
+#         }
+#         if unofficial_title:
+#             parameter["UnofficialTitle"] = unofficial_title
+#         if status:
+#             parameter["Status"] = status
+#         if access_code:
+#             parameter["AccessCode"] = access_code
+#         if access_group:
+#             parameter["AccessGroup"] = access_group
+#         if journal_unit:
+#             parameter["JournalUnit"] = journal_unit
+#         if sub_archive:
+#             parameter["SubArchive"] = sub_archive
+#         if external_id:
+#             parameter["ExternalId"] = {"Id": external_id, "Type": external_id_type}
+#         if responsible_person_id_number:
+#             parameter["ResponsiblePersonIdNumber"] = responsible_person_id_number
+#         if responsible_person_recno:
+#             parameter["ResponsiblePersonRecno"] = responsible_person_recno
+#         if responsible_person_email:
+#             parameter["ResponsiblePersonEmail"] = responsible_person_email
+#         if responsible_person_user_id:
+#             parameter["ResponsiblePersonUserId"] = responsible_person_user_id
+#         parameter.update(extra_fields)
+
+#         response = self.post(
+#             f"{self.base_endpoint}/CaseService/CreateCase",
+#             json={"parameter": parameter},
+#         )
+#         return response.json()
+
+    # ------------------------------------------------------------------
+    # UserService
+    # ------------------------------------------------------------------
+    def get_users(
         self,
-        title: str,
-        case_type: Union[str, CaseType],
-        sensitivity: str,
-        unofficial_title: Optional[str] = None,
-        status: Optional[Union[str, CaseStatus]] = None,
-        access_code: Optional[str] = None,
-        access_group: Optional[Union[str, AccessGroup]] = None,
-        journal_unit: Optional[str] = None,
-        sub_archive: Optional[str] = None,
-        responsible_person_id_number: Optional[str] = None,
-        responsible_person_recno: Optional[str] = None,
-        responsible_person_email: Optional[str] = None,
-        responsible_person_user_id: Optional[str] = None,
-        **extra_fields,
+        user_id: Optional[str] = None,
+        contact_external_id: Optional[str] = None,
+        contact_recno: Optional[str] = None,
+        page: Optional[int] = None,
+        max_rows: Optional[int] = None,
+        sort_criterion: Optional[str] = None,
+        **extra_query,
     ) -> dict:
         """
-        Create a case (CaseType "Sak"/Noark Sak) via CaseService/CreateCase.
-
-        `case_type` and `sensitivity` are mandatory here (even though SIF
-        itself treats both as optional) because, in the Naestved tenant,
-        omitting either one is guaranteed to make 360 reject the insert:
-        the generic default case_type (recno 2) is expired in this tenant,
-        and the eDoc event handler
-        EventHandlerWhenCaseOrDocSensitivityIsMandatory rejects any Case
-        (or Document) insert that doesn't carry a sensitivity value, with
-        "Der er ikke angivet noget følsomhed" ("no sensitivity specified").
+        Search for users via UserService/GetUsers.
 
         Args:
-            title: Case description. Maps to the CreateCaseParameter
-                "Title" field. Mandatory.
-            case_type: Code value, recno, or a CaseType member (e.g.
-                CaseType.ADMINISTRATIVE_CASE). Maps to "CaseType".
-            sensitivity: The case's "Følsomhed"/sensitivity classification,
-                required by this tenant's EventHandlerWhenCaseOrDocSensitivityIsMandatory
-                rule. Sent as an AdditionalFieldParameter named
-                SENSITIVITY_FIELD_NAME. NOT yet backed by a `Sensitivity`
-                enum: unlike CaseType/CaseStatus/AccessGroup, this is not a
-                360 code table (confirmed empirically - see
-                SENSITIVITY_FIELD_NAME's comment) and its valid values
-                and exact field Name still need confirming with the 360
-                admin / Tietoevry. Pass the raw string value for now;
-                swap in an enum here once confirmed.
-            unofficial_title: Maps to "UnofficialTitle". Defaults to
-                `title` in 360 if not set.
-            status: Code value, recno, or a CaseStatus member (e.g.
-                CaseStatus.B for "Under behandling"). Maps to "Status".
-                Not every status is valid for every case_type - 360 will
-                reject the combination with "The selected Case Status is
-                not valid for the Case Type" if so; check 360 web admin
-                for the case type's allowed statuses. Closing statuses
-                require ArchiveCodes to also be set (pass via
-                extra_fields).
-            access_code: Code value or recno. Maps to "AccessCode". Some
-                access codes require "Paragraph" to also be set (pass via
-                extra_fields).
-            access_group: Code value, recno, or an AccessGroup member.
-                Maps to "AccessGroup".
-            journal_unit: Code value or recno. Maps to "JournalUnit".
-            sub_archive: Code value or recno. Maps to "SubArchive".
-            responsible_person_id_number: External ID of the responsible
-                person. Maps to "ResponsiblePersonIdNumber". Provide only
-                one of the four responsible_person_* arguments.
-            responsible_person_recno: Recno of the responsible person.
-                Maps to "ResponsiblePersonRecno".
-            responsible_person_email: Email of the responsible person.
-                Maps to "ResponsiblePersonEmail".
-            responsible_person_user_id: Username of the responsible person
-                (e.g. "no\\name.name"). Maps to "ResponsiblePersonUserId".
-            **extra_fields: Any other CreateCaseParameter field to pass
-                through as-is (e.g. ArchiveCodes, Contacts, Keywords,
-                Category, Project, Remarks). See the SIF API
-                documentation, chapter "7.1 CreateCase", for the full
-                list of fields. Pass "AdditionalFields" here (a list of
-                {"Name": ..., "Value": ...} dicts) for any other custom
-                field besides sensitivity - it will be merged with the
-                sensitivity entry, not overwritten.
+            user_id: The ID that identifies the User (typically
+                "domain\\user"). Maps to the GetUsersParameters "UserId"
+                field.
+            contact_external_id: Search users associated with this
+                contact's external id. Maps to "ContactExternalId".
+            contact_recno: Search users associated with this contact's
+                recno (e.g. "recno:123"). Maps to "ContactRecno".
+            page: Pagination page number, 0-indexed. Defaults to 0.
+                Only applies when none of user_id/contact_external_id/
+                contact_recno is given. Should be used together with
+                sort_criterion for a stable result order across pages.
+            max_rows: Max number of users to return per page. Defaults
+                to all. Only applies when none of user_id/
+                contact_external_id/contact_recno is given.
+            sort_criterion: "RecnoAscending" or "RecnoDescending",
+                applied before page/max_rows. Should be set whenever
+                `page` is used.
+            **extra_query: Any other GetUsersParameters field to pass
+                through as-is. See the SIF API documentation, chapter
+                "5.2 GetUsers", for the full list of fields.
 
         Returns:
-            The parsed JSON CaseOperationResult, e.g. {"Recno": ...,
-            "CaseNumber": ..., "UID": ..., ...}.
-
-        Raises:
-            ValueError: if `title` or `sensitivity` is empty.
+            The parsed JSON GetUsersResult, e.g. {"Users": [...],
+            "TotalCount": ..., "TotalPageCount": ..., "Successful": ...}.
+            Each entry in "Users" is a UserBase object (Login,
+            ContactExternalId, ContactRecno, IsActive, Profiles,
+            AccessGroups, IsServiceUser, Language).
         """
-        if not title:
-            raise ValueError("create_case requires a non-empty title.")
-        if not sensitivity:
-            raise ValueError("create_case requires a non-empty sensitivity.")
-
-        additional_fields = list(extra_fields.pop("AdditionalFields", []))
-        additional_fields.append({"Name": SENSITIVITY_FIELD_NAME, "Value": sensitivity})
-
-        parameter: dict = {
-            "Title": title,
-            "CaseType": case_type,
-            "AdditionalFields": additional_fields,
-        }
-        if unofficial_title:
-            parameter["UnofficialTitle"] = unofficial_title
-        if status:
-            parameter["Status"] = status
-        if access_code:
-            parameter["AccessCode"] = access_code
-        if access_group:
-            parameter["AccessGroup"] = access_group
-        if journal_unit:
-            parameter["JournalUnit"] = journal_unit
-        if sub_archive:
-            parameter["SubArchive"] = sub_archive
-        if responsible_person_id_number:
-            parameter["ResponsiblePersonIdNumber"] = responsible_person_id_number
-        if responsible_person_recno:
-            parameter["ResponsiblePersonRecno"] = responsible_person_recno
-        if responsible_person_email:
-            parameter["ResponsiblePersonEmail"] = responsible_person_email
-        if responsible_person_user_id:
-            parameter["ResponsiblePersonUserId"] = responsible_person_user_id
-        parameter.update(extra_fields)
+        query: dict = {}
+        if user_id:
+            query["UserId"] = user_id
+        if contact_external_id:
+            query["ContactExternalId"] = contact_external_id
+        if contact_recno:
+            query["ContactRecno"] = contact_recno
+        if page is not None:
+            query["Page"] = page
+        if max_rows is not None:
+            query["MaxRows"] = max_rows
+        if sort_criterion:
+            query["SortCriterion"] = sort_criterion
+        query.update(extra_query)
 
         response = self.post(
-            f"{self.base_endpoint}/CaseService/CreateCase",
-            json={"parameter": parameter},
+            f"{self.base_endpoint}/UserService/GetUsers",
+            json={"parameter": query},
         )
         return response.json()
 
+    def find_users_by_email(self, email: str, include_alternative: bool = True) -> dict:
+        """
+        Find users by their contact person's email address.
+
+        UserService/GetUsers has no Email criterion - only UserId,
+        ContactExternalId or ContactRecno. This looks the contact person
+        up first via ContactService/GetContactPersons (which does support
+        Email/AlternativeEmail), then resolves each matching contact to
+        its user(s) via get_users(contact_recno=...).
+
+        Args:
+            email: Email address to search for.
+            include_alternative: Also match contacts whose
+                AlternativeEmail equals `email`, not just Email. Default
+                True.
+
+        Returns:
+            A list of GetUsersResult["Users"] entries (UserBase objects,
+            see get_users()) across all contacts that matched the email.
+            Empty list if no contact or no user was found.
+        """
+        contacts = self.get_contact_persons(email=email)["ContactPersons"]
+        if include_alternative:
+            contacts += self.get_contact_persons(alternative_email=email)["ContactPersons"]
+
+        users = []
+        seen_recnos = set()
+        for contact in contacts:
+            recno = contact["Recno"]
+            if recno in seen_recnos:
+                continue
+            seen_recnos.add(recno)
+            result = self.get_users(contact_recno=f"recno:{recno}")
+            users.extend(result["Users"])
+        return users
+
+    # ------------------------------------------------------------------
+    # ContactService
+    # ------------------------------------------------------------------
+    def get_contact_persons(
+        self,
+        name: Optional[str] = None,
+        recno: Optional[str] = None,
+        external_id: Optional[str] = None,
+        email: Optional[str] = None,
+        alternative_email: Optional[str] = None,
+        active: Optional[bool] = None,
+        categories: Optional[list] = None,
+        page: Optional[int] = None,
+        max_rows: Optional[int] = None,
+        sort_criterion: Optional[str] = None,
+        **extra_query,
+    ) -> dict:
+        """
+        Search for contact persons via ContactService/GetContactPersons.
+
+        Args:
+            name: Partial name search. Maps to "Name" (360° field
+                Contact-SearchName) - returns all contacts whose name
+                contains this value.
+            recno: Recno (unique id in 360) of the contact. Must be an
+                exact match. Maps to "Recno".
+            external_id: External identity number of the contact. Must
+                be an exact match. Maps to "ExternalId".
+            email: Email address. Must be an exact match. Maps to
+                "Email".
+            alternative_email: Alternative email address. Must be an
+                exact match. Maps to "AlternativeEmail".
+            active: Filter on active/inactive contacts. Maps to
+                "Active".
+            categories: List of categories, identified by code name (in
+                the configured language) or recno (e.g. "recno:123").
+                Maps to "Categories".
+            page: Pagination page number, 0-indexed. Defaults to 0.
+                Should be used together with sort_criterion for a
+                stable result order across pages.
+            max_rows: Max number of contacts to return per page.
+                Defaults to all.
+            sort_criterion: "RecnoAscending" or "RecnoDescending",
+                applied before page/max_rows.
+            **extra_query: Any other GetContactPersonParameter field to
+                pass through as-is (e.g. CreatedDateRange,
+                ModifiedDateRange, DateCriteria, Web, AdditionalFields,
+                AdditionalListFields, IncludeCustomFields). See the SIF
+                API documentation, chapter "4.7 GetContactPersons", for
+                the full list of fields.
+
+        Returns:
+            The parsed JSON GetContactPersonResult, e.g.
+            {"ContactPersons": [...], "TotalCount": ...,
+            "TotalPageCount": ..., "Successful": ...}. Each entry is a
+            ContactPersonResult object (Recno, FirstName, LastName,
+            ExternalId, Email, ...).
+
+        Raises:
+            ValueError: if no search criterion was supplied at all
+                (GetContactPersons requires at least one).
+        """
+        if not name and not recno and not external_id and not email and not alternative_email and not categories and not extra_query:
+            raise ValueError(
+                "get_contact_persons requires at least one search criterion "
+                "(name, recno, external_id, email, alternative_email, "
+                "categories, or another GetContactPersonParameter field "
+                "passed via extra_query)."
+            )
+
+        query: dict = {}
+        if name:
+            query["Name"] = name
+        if recno:
+            query["Recno"] = recno
+        if external_id:
+            query["ExternalId"] = external_id
+        if email:
+            query["Email"] = email
+        if alternative_email:
+            query["AlternativeEmail"] = alternative_email
+        if active is not None:
+            query["Active"] = active
+        if categories:
+            query["Categories"] = categories
+        if page is not None:
+            query["Page"] = page
+        if max_rows is not None:
+            query["MaxRows"] = max_rows
+        if sort_criterion:
+            query["SortCriterion"] = sort_criterion
+        query.update(extra_query)
+
+        response = self.post(
+            f"{self.base_endpoint}/ContactService/GetContactPersons",
+            json={"parameter": query},
+        )
+        return response.json()
+    # *****************************************************************************************************************
+    # *****************************************************************************************************************
+    # *****************************************************************************************************************
+    # *****************************************************************************************************************
+    # *****************************************************************************************************************
+    # *****************************************************************************************************************
+    # *****************************************************************************************************************
+    def sif_call(self, service: str, method: str, parameter: dict | None = None) -> dict:
+        """Call any SIF RPC method and return the JSON response."""
+        resp = self.post(
+            f"{self.base_endpoint}/{service}/{method}",
+            json={"parameter": parameter or {}},
+        )
+        data = resp.json()
+        # SIF returns HTTP 200 even on business errors - check "Successful"
+        if data.get("Successful") is False:
+            raise RuntimeError(f"SIF error: {data.get('ErrorMessage')} | {data.get('ErrorDetails')}")
+        return data
+        
+    def create_case(self, title, responsible_recno, archive_codes, case_type, status,
+                    access_code=None, external_id=None):
+        parameter = {
+            "Title": title,
+            "UnofficialTitle": title,
+            "CaseType": case_type,
+            "Status": status,
+            "ResponsiblePersonRecno": responsible_recno,
+            "ArchiveCodes": [
+                {"Sort": i, "ArchiveType": t, "ArchiveCode": c}
+                for i, (t, c) in enumerate(archive_codes, start=1)
+            ],
+        }
+        if access_code:
+            parameter["AccessCode"] = access_code
+        if external_id:
+            parameter["ExternalId"] = {"Id": external_id, "Type": "MyIntegration"}
+        return self.sif_call("CaseService", "CreateCase", parameter)
+
+    def create_document(self, title, case_number, filepath, category, status,
+                        responsible_recno=None):
+        path = Path(filepath)
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        parameter = {
+            "Title": title,
+            "CaseNumber": case_number,
+            "Category": category,
+            "Status": status,
+            "Files": [{
+                "Title": path.name,
+                "Format": path.suffix[1:],
+                "Base64Data": data,
+            }],
+        }
+        if responsible_recno:
+            parameter["ResponsiblePersonRecno"] = responsible_recno
+        return self.sif_call("DocumentService", "CreateDocument", parameter)
 
 if __name__ == "__main__":
     # Values below come from Tieto (realm_url, client_id) and from your
