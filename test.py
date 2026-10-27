@@ -31,7 +31,7 @@ from src.config import get_configuration
 from src.public360_client import Public360AuthError, Public360Client, DocumentCategory,DocumentStatus
 from confighandler.src.configuration import Configuration
 from src.public360_client import AccessGroup, CaseStatus, CaseType
-from random import *
+#from random import *
 from pathlib import Path
 
 def get_document_stuff(client):
@@ -44,38 +44,49 @@ def get_document_stuff(client):
     print(json.dumps(doc_result, indent=4))
     for cat in doc_result:
         print(f"{cat['Code']} # {cat['Description']} # {cat['Recno']}")
+def find_person_recno(client, email:str=None, name:str=None):
+    if not email and not name:
+        return None
 
+    recno = client.find_person_recno(name_or_email=email if email else name)
+    print(f"recno for {email if email else name} is {recno}")
+    return recno
+
+    
+    
 def get_cases_test(client):
-    print("#####################################################################################################")
-    res = client.sif_call("CaseService", "GetCases", { "CaseNumber":"85.15.00-P20-4-21S"})  # your existing case
-    case = res["Cases"][0]
+    try:
+        print("#####################################################################################################")
+        res = client.sif_call("CaseService", "GetCases", { "CaseNumber":"85.15.00-P20-4-21S"})  # your existing case
+        case = res["Cases"][0]
 
-    keys = ["CaseType", "Status", "AccessCode", "AccessGroup", "Paragraph",
-            "ResponsiblePersonRecno", "ResponsiblePersonInitials",
-            "ResponsibleEnterpriseRecno", "ResponsibleEnterprise"]
-    for k in keys:
-        print(k, "=", case.get(k))
-    print("#####################################################################################################")
-    print("#####################################################################################################")
-    res = client.sif_call("CaseService", "GetCases", { "Title":"Testsag oprettet via SIF API 3"})  # your existing case
-    case = res["Cases"][0]
+        keys = ["CaseType", "Status", "AccessCode", "AccessGroup", "Paragraph",
+                "ResponsiblePersonRecno", "ResponsiblePersonInitials",
+                "ResponsibleEnterpriseRecno", "ResponsibleEnterprise"]
+        for k in keys:
+            print(k, "=", case.get(k))
+        print("#####################################################################################################")
+        print("#####################################################################################################")
+        res = client.sif_call("CaseService", "GetCases", { "Title":"Testsag oprettet via SIF API 3"})  # your existing case
+        case = res["Cases"][0]
 
-    keys = ["CaseType", "Status", "AccessCode", "AccessGroup", "Paragraph",
-            "ResponsiblePersonRecno", "ResponsiblePersonInitials",
-            "ResponsibleEnterpriseRecno", "ResponsibleEnterprise"]
-    for k in keys:
-        print(k, "=", case.get(k))
+        keys = ["CaseType", "Status", "AccessCode", "AccessGroup", "Paragraph",
+                "ResponsiblePersonRecno", "ResponsiblePersonInitials",
+                "ResponsibleEnterpriseRecno", "ResponsibleEnterprise"]
+        for k in keys:
+            print(k, "=", case.get(k))
 
-    print(case['ResponsiblePerson'])
+        print(case['ResponsiblePerson'])
 
-    print("#####################################################################################################")
+        print("#####################################################################################################")
+    except Exception as e:
+        print(e)
 
 def create_case_test(client, filename:str=None):
-    
-    
+    me = find_person_recno(client, email="lakas@naestved.dk")
     r = client.create_case(
-                    title=f"Testsag oprettet via SIF API-{randint(1,100)}-LKKA",
-                    responsible_recno=527919,      # Lars Kasper
+                    title=f"Testsag oprettet via SIF API-LKKA",
+                    responsible_recno=me,
                     case_type="recno:300001",
                     status="recno:300001",
                     archive_codes=[
@@ -93,7 +104,7 @@ def create_case_test(client, filename:str=None):
             filepath=filename,
             category=DocumentCategory.INTERNT,
             status=DocumentStatus.K,
-            responsible_recno=527919,
+            responsible_recno=me,
         )
         print(doc)
 
@@ -181,7 +192,6 @@ def run_test(env_name: str, api_path: str=None) -> int:
     print(f"[{env_name}] OK - HTTP {response.status_code}")
     print(response.json())
     
-   
     get_document_stuff(client) 
 
     get_cases_test(client)    

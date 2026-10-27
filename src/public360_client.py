@@ -1043,6 +1043,38 @@ class Public360Client:
             users.extend(result["Users"])
         return users
 
+    def find_person_recno(self, name_or_email: str) -> int:
+        """
+        Find the recno of a contact person, for use as responsible_recno
+        (ResponsiblePersonRecno).
+
+        If `name_or_email` contains "@" it is matched exactly against
+        Email (then AlternativeEmail). Otherwise it is a partial name
+        search limited to active contacts.
+
+        Raises ValueError if no contact matches, or if more than one does
+        (the message lists the candidates so you can refine the search).
+        """
+        if "@" in name_or_email:
+            contacts = self.get_contact_persons(email=name_or_email)["ContactPersons"]
+            if not contacts:
+                contacts = self.get_contact_persons(
+                    alternative_email=name_or_email
+                )["ContactPersons"]
+        else:
+            contacts = self.get_contact_persons(
+                name=name_or_email, active=True
+            )["ContactPersons"]
+
+        if not contacts:
+            raise ValueError(f"No contact person found for {name_or_email!r}")
+        if len(contacts) > 1:
+            found = ", ".join(f"{c['Recno']} ({c.get('Name')})" for c in contacts)
+            raise ValueError(
+                f"{len(contacts)} contacts match {name_or_email!r}: {found}"
+            )
+        return contacts[0]["Recno"]
+
     # ------------------------------------------------------------------
     # ContactService
     # ------------------------------------------------------------------
