@@ -1173,6 +1173,53 @@ class Public360Client:
             json={"parameter": query},
         )
         return response.json()
+
+    def get_enterprises(
+        self,
+        name: Optional[str] = None,
+        recno: Optional[str] = None,
+        external_id: Optional[str] = None,
+        enterprise_number: Optional[str] = None,
+        categories: Optional[list] = None,
+        active: Optional[bool] = None,
+        page: Optional[int] = None,
+        max_rows: Optional[int] = None,
+        sort_criterion: Optional[str] = None,
+        **extra_query,
+    ) -> dict:
+        """
+        Search enterprises / org units (teams) via
+        ContactService/GetEnterprises. At least one of name, recno,
+        enterprise_number or categories is required. The Recno of a
+        result can be used as ResponsibleEnterpriseRecno on cases and
+        documents.
+        """
+        if not (name or recno or enterprise_number or categories):
+            raise ValueError(
+                "get_enterprises requires name, recno, enterprise_number "
+                "or categories."
+            )
+        query: dict = {}
+        if name:
+            query["Name"] = name
+        if recno:
+            query["Recno"] = recno
+        if external_id:
+            query["ExternalID"] = external_id
+        if enterprise_number:
+            query["EnterpriseNumber"] = enterprise_number
+        if categories:
+            query["Categories"] = categories
+        if active is not None:
+            query["Active"] = active
+        if page is not None:
+            query["Page"] = page
+        if max_rows is not None:
+            query["MaxRows"] = max_rows
+        if sort_criterion:
+            query["SortCriterion"] = sort_criterion
+        query.update(extra_query)
+        return self.sif_call("ContactService", "GetEnterprises", query)
     # *****************************************************************************************************************
     # *****************************************************************************************************************
     # *****************************************************************************************************************

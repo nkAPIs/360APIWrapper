@@ -52,7 +52,20 @@ def find_person_recno(client, email:str=None, name:str=None):
     print(f"recno for {email if email else name} is {recno}")
     return recno
 
-    
+def find_enterprises(client):
+    result = client.get_enterprises(name='TID Systembrugere'
+        # name: Optional[str] = None,
+        # recno: Optional[str] = None,
+        # external_id: Optional[str] = None,
+        # enterprise_number: Optional[str] = None,
+        # categories: Optional[list] = None,
+        # active: Optional[bool] = None,
+        # page: Optional[int] = None,
+        # max_rows: Optional[int] = None,
+        # sort_criterion: Optional[str] = None,
+        # **extra_query,
+    )
+    print(json.dumps(result, indent=4))
     
 def get_cases_test(client):
     try:
@@ -191,6 +204,10 @@ def run_test(env_name: str, api_path: str=None) -> int:
     # actually reached 360 and got real data back, not just a 200.
     print(f"[{env_name}] OK - HTTP {response.status_code}")
     print(response.json())
+    
+    
+    find_enterprises(client)
+    
     
     get_document_stuff(client) 
 
