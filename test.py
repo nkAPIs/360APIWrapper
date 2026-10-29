@@ -98,7 +98,7 @@ def get_cases_test(client):
 def create_case_test(client, filename:str=None):
     me = find_person_recno(client, email="lakas@naestved.dk")
     r = client.create_case(
-                    title=f"Testsag oprettet via SIF API-LKKA",
+                    title=f"Testsag oprettet via SIF API-LKKA 291026",
                     responsible_recno=me,
                     case_type="recno:300001",
                     status="recno:300001",
@@ -211,7 +211,8 @@ def run_test(env_name: str, api_path: str=None) -> int:
     
     get_document_stuff(client) 
 
-    get_cases_test(client)    
+    get_cases_test(client)  
+    create_case_test(client)  
     create_case_test(client, filename="/Users/lakas/git/DataProccesor/README.pdf")
 
     print("********* END TEST **************************")    

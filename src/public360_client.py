@@ -796,151 +796,6 @@ class Public360Client:
         )
         return response.json()
 
-#     def create_case(
-#         self,
-#         title: str,
-#         case_type: Union[str, CaseType]=None,
-#         sensitivity: str=None,
-#         unofficial_title: Optional[str] = None,
-#         status: Optional[Union[str, CaseStatus]] = None,
-#         access_code: Optional[str] = None,
-#         access_group: Optional[Union[str, AccessGroup]] = None,
-#         journal_unit: Optional[str] = None,
-#         sub_archive: Optional[str] = None,
-#         external_id: Optional[str] = None,
-#         external_id_type: Optional[str] = None,
-#         responsible_person_id_number: Optional[str] = None,
-#         responsible_person_recno: Optional[str] = None,
-#         responsible_person_email: Optional[str] = None,
-#         responsible_person_user_id: Optional[str] = None,
-#         **extra_fields,
-#     ) -> dict:
-#         """
-#         Create a case (CaseType "Sak"/Noark Sak) via CaseService/CreateCase.
-
-#         `case_type` and `sensitivity` are mandatory here (even though SIF
-#         itself treats both as optional) because, in the Naestved tenant,
-#         omitting either one is guaranteed to make 360 reject the insert:
-#         the generic default case_type (recno 2) is expired in this tenant,
-#         and the eDoc event handler
-#         EventHandlerWhenCaseOrDocSensitivityIsMandatory rejects any Case
-#         (or Document) insert that doesn't carry a sensitivity value, with
-#         "Der er ikke angivet noget følsomhed" ("no sensitivity specified").
-
-#         Args:
-#             title: Case description. Maps to the CreateCaseParameter
-#                 "Title" field. Mandatory.
-#             case_type: Code value, recno, or a CaseType member (e.g.
-#                 CaseType.ADMINISTRATIVE_CASE). Maps to "CaseType".
-#             sensitivity: The case's "Følsomhed"/sensitivity classification,
-#                 required by this tenant's EventHandlerWhenCaseOrDocSensitivityIsMandatory
-#                 rule. Sent as an AdditionalFieldParameter named
-#                 SENSITIVITY_FIELD_NAME. NOT yet backed by a `Sensitivity`
-#                 enum: unlike CaseType/CaseStatus/AccessGroup, this is not a
-#                 360 code table (confirmed empirically - see
-#                 SENSITIVITY_FIELD_NAME's comment) and its valid values
-#                 and exact field Name still need confirming with the 360
-#                 admin / Tietoevry. Pass the raw string value for now;
-#                 swap in an enum here once confirmed.
-#             unofficial_title: Maps to "UnofficialTitle". Defaults to
-#                 `title` in 360 if not set.
-#             status: Code value, recno, or a CaseStatus member (e.g.
-#                 CaseStatus.B for "Under behandling"). Maps to "Status".
-#                 Not every status is valid for every case_type - 360 will
-#                 reject the combination with "The selected Case Status is
-#                 not valid for the Case Type" if so; check 360 web admin
-#                 for the case type's allowed statuses. Closing statuses
-#                 require ArchiveCodes to also be set (pass via
-#                 extra_fields).
-#             access_code: Code value or recno. Maps to "AccessCode". Some
-#                 access codes require "Paragraph" to also be set (pass via
-#                 extra_fields).
-#             access_group: Code value, recno, or an AccessGroup member.
-#                 Maps to "AccessGroup".
-#             journal_unit: Code value or recno. Maps to "JournalUnit".
-#             sub_archive: Code value or recno. Maps to "SubArchive".
-#             external_id: ID of this case in another (non-360) system,
-#                 for later lookup via get_cases(external_id=...). Maps to
-#                 "ExternalId" (an ExternalIdParameter {"Id": ...,
-#                 "Type": ...}). Must be given together with
-#                 external_id_type.
-#             external_id_type: Name of the other system that external_id
-#                 belongs to (e.g. "Visma"). Maps to ExternalIdParameter's
-#                 "Type".
-#             responsible_person_id_number: External ID of the responsible
-#                 person. Maps to "ResponsiblePersonIdNumber". Provide only
-#                 one of the four responsible_person_* arguments.
-#             responsible_person_recno: Recno of the responsible person.
-#                 Maps to "ResponsiblePersonRecno".
-#             responsible_person_email: Email of the responsible person.
-#                 Maps to "ResponsiblePersonEmail".
-#             responsible_person_user_id: Username of the responsible person
-#                 (e.g. "no\\name.name"). Maps to "ResponsiblePersonUserId".
-#             **extra_fields: Any other CreateCaseParameter field to pass
-#                 through as-is (e.g. ArchiveCodes, Contacts, Keywords,
-#                 Category, Project, Remarks). See the SIF API
-#                 documentation, chapter "7.1 CreateCase", for the full
-#                 list of fields. Pass "AdditionalFields" here (a list of
-#                 {"Name": ..., "Value": ...} dicts) for any other custom
-#                 field besides sensitivity - it will be merged with the
-#                 sensitivity entry, not overwritten.
-
-#         Returns:
-#             The parsed JSON CaseOperationResult, e.g. {"Recno": ...,
-#             "CaseNumber": ..., "UID": ..., ...}.
-
-#         Raises:
-#             ValueError: if `title` or `sensitivity` is empty, or if only
-#                 one of external_id/external_id_type was given.
-#         """
-#         if not title:
-#             raise ValueError("create_case requires a non-empty title.")
-#         # if not sensitivity:
-#         #     raise ValueError("create_case requires a non-empty sensitivity.")
-#         if bool(external_id) != bool(external_id_type):
-#             raise ValueError(
-#                 "create_case requires both external_id and "
-#                 "external_id_type together, not just one of them."
-#             )
-
-#         additional_fields = list(extra_fields.pop("AdditionalFields", []))
-# #        additional_fields.append({"Name": SENSITIVITY_FIELD_NAME, "Value": sensitivity})
-
-#         parameter: dict = {
-#             "Title": title,
-#             #"CaseType": case_type,
-#             "AdditionalFields": additional_fields,
-#         }
-#         if unofficial_title:
-#             parameter["UnofficialTitle"] = unofficial_title
-#         if status:
-#             parameter["Status"] = status
-#         if access_code:
-#             parameter["AccessCode"] = access_code
-#         if access_group:
-#             parameter["AccessGroup"] = access_group
-#         if journal_unit:
-#             parameter["JournalUnit"] = journal_unit
-#         if sub_archive:
-#             parameter["SubArchive"] = sub_archive
-#         if external_id:
-#             parameter["ExternalId"] = {"Id": external_id, "Type": external_id_type}
-#         if responsible_person_id_number:
-#             parameter["ResponsiblePersonIdNumber"] = responsible_person_id_number
-#         if responsible_person_recno:
-#             parameter["ResponsiblePersonRecno"] = responsible_person_recno
-#         if responsible_person_email:
-#             parameter["ResponsiblePersonEmail"] = responsible_person_email
-#         if responsible_person_user_id:
-#             parameter["ResponsiblePersonUserId"] = responsible_person_user_id
-#         parameter.update(extra_fields)
-
-#         response = self.post(
-#             f"{self.base_endpoint}/CaseService/CreateCase",
-#             json={"parameter": parameter},
-#         )
-#         return response.json()
-
     # ------------------------------------------------------------------
     # UserService
     # ------------------------------------------------------------------
@@ -1239,8 +1094,14 @@ class Public360Client:
             raise RuntimeError(f"SIF error: {data.get('ErrorMessage')} | {data.get('ErrorDetails')}")
         return data
         
-    def create_case(self, title, responsible_recno, archive_codes, case_type, status,
-                    access_code=None, external_id=None):
+    def create_case(self, 
+                    title, 
+                    responsible_recno, 
+                    archive_codes, 
+                    case_type, 
+                    status,
+                    access_code=None, 
+                    external_id=None):
         parameter = {
             "Title": title,
             "UnofficialTitle": title,
@@ -1256,8 +1117,12 @@ class Public360Client:
             parameter["AccessCode"] = access_code
         if external_id:
             parameter["ExternalId"] = {"Id": external_id, "Type": "MyIntegration"}
-        return self.sif_call("CaseService", "CreateCase", parameter)
+            
+        return self._create_case(**parameter)    
 
+    def _create_case(self, **parameter) -> dict:
+        return self.sif_call("CaseService", "CreateCase", parameter)
+    
     def create_document(self, title, case_number, filepath, category, status,
                         responsible_recno=None):
         path = Path(filepath)
@@ -1293,3 +1158,152 @@ if __name__ == "__main__":
     # exchange, refresh, and retries:
     #   response = client.get("/some/api/path")
     #   print(response.json())
+    
+    
+    
+    
+    #     def create_case(
+#         self,
+#         title: str,
+#         case_type: Union[str, CaseType]=None,
+#         sensitivity: str=None,
+#         unofficial_title: Optional[str] = None,
+#         status: Optional[Union[str, CaseStatus]] = None,
+#         access_code: Optional[str] = None,
+#         access_group: Optional[Union[str, AccessGroup]] = None,
+#         journal_unit: Optional[str] = None,
+#         sub_archive: Optional[str] = None,
+#         external_id: Optional[str] = None,
+#         external_id_type: Optional[str] = None,
+#         responsible_person_id_number: Optional[str] = None,
+#         responsible_person_recno: Optional[str] = None,
+#         responsible_person_email: Optional[str] = None,
+#         responsible_person_user_id: Optional[str] = None,
+#         **extra_fields,
+#     ) -> dict:
+#         """
+#         Create a case (CaseType "Sak"/Noark Sak) via CaseService/CreateCase.
+
+#         `case_type` and `sensitivity` are mandatory here (even though SIF
+#         itself treats both as optional) because, in the Naestved tenant,
+#         omitting either one is guaranteed to make 360 reject the insert:
+#         the generic default case_type (recno 2) is expired in this tenant,
+#         and the eDoc event handler
+#         EventHandlerWhenCaseOrDocSensitivityIsMandatory rejects any Case
+#         (or Document) insert that doesn't carry a sensitivity value, with
+#         "Der er ikke angivet noget følsomhed" ("no sensitivity specified").
+
+#         Args:
+#             title: Case description. Maps to the CreateCaseParameter
+#                 "Title" field. Mandatory.
+#             case_type: Code value, recno, or a CaseType member (e.g.
+#                 CaseType.ADMINISTRATIVE_CASE). Maps to "CaseType".
+#             sensitivity: The case's "Følsomhed"/sensitivity classification,
+#                 required by this tenant's EventHandlerWhenCaseOrDocSensitivityIsMandatory
+#                 rule. Sent as an AdditionalFieldParameter named
+#                 SENSITIVITY_FIELD_NAME. NOT yet backed by a `Sensitivity`
+#                 enum: unlike CaseType/CaseStatus/AccessGroup, this is not a
+#                 360 code table (confirmed empirically - see
+#                 SENSITIVITY_FIELD_NAME's comment) and its valid values
+#                 and exact field Name still need confirming with the 360
+#                 admin / Tietoevry. Pass the raw string value for now;
+#                 swap in an enum here once confirmed.
+#             unofficial_title: Maps to "UnofficialTitle". Defaults to
+#                 `title` in 360 if not set.
+#             status: Code value, recno, or a CaseStatus member (e.g.
+#                 CaseStatus.B for "Under behandling"). Maps to "Status".
+#                 Not every status is valid for every case_type - 360 will
+#                 reject the combination with "The selected Case Status is
+#                 not valid for the Case Type" if so; check 360 web admin
+#                 for the case type's allowed statuses. Closing statuses
+#                 require ArchiveCodes to also be set (pass via
+#                 extra_fields).
+#             access_code: Code value or recno. Maps to "AccessCode". Some
+#                 access codes require "Paragraph" to also be set (pass via
+#                 extra_fields).
+#             access_group: Code value, recno, or an AccessGroup member.
+#                 Maps to "AccessGroup".
+#             journal_unit: Code value or recno. Maps to "JournalUnit".
+#             sub_archive: Code value or recno. Maps to "SubArchive".
+#             external_id: ID of this case in another (non-360) system,
+#                 for later lookup via get_cases(external_id=...). Maps to
+#                 "ExternalId" (an ExternalIdParameter {"Id": ...,
+#                 "Type": ...}). Must be given together with
+#                 external_id_type.
+#             external_id_type: Name of the other system that external_id
+#                 belongs to (e.g. "Visma"). Maps to ExternalIdParameter's
+#                 "Type".
+#             responsible_person_id_number: External ID of the responsible
+#                 person. Maps to "ResponsiblePersonIdNumber". Provide only
+#                 one of the four responsible_person_* arguments.
+#             responsible_person_recno: Recno of the responsible person.
+#                 Maps to "ResponsiblePersonRecno".
+#             responsible_person_email: Email of the responsible person.
+#                 Maps to "ResponsiblePersonEmail".
+#             responsible_person_user_id: Username of the responsible person
+#                 (e.g. "no\\name.name"). Maps to "ResponsiblePersonUserId".
+#             **extra_fields: Any other CreateCaseParameter field to pass
+#                 through as-is (e.g. ArchiveCodes, Contacts, Keywords,
+#                 Category, Project, Remarks). See the SIF API
+#                 documentation, chapter "7.1 CreateCase", for the full
+#                 list of fields. Pass "AdditionalFields" here (a list of
+#                 {"Name": ..., "Value": ...} dicts) for any other custom
+#                 field besides sensitivity - it will be merged with the
+#                 sensitivity entry, not overwritten.
+
+#         Returns:
+#             The parsed JSON CaseOperationResult, e.g. {"Recno": ...,
+#             "CaseNumber": ..., "UID": ..., ...}.
+
+#         Raises:
+#             ValueError: if `title` or `sensitivity` is empty, or if only
+#                 one of external_id/external_id_type was given.
+#         """
+#         if not title:
+#             raise ValueError("create_case requires a non-empty title.")
+#         # if not sensitivity:
+#         #     raise ValueError("create_case requires a non-empty sensitivity.")
+#         if bool(external_id) != bool(external_id_type):
+#             raise ValueError(
+#                 "create_case requires both external_id and "
+#                 "external_id_type together, not just one of them."
+#             )
+
+#         additional_fields = list(extra_fields.pop("AdditionalFields", []))
+# #        additional_fields.append({"Name": SENSITIVITY_FIELD_NAME, "Value": sensitivity})
+
+#         parameter: dict = {
+#             "Title": title,
+#             #"CaseType": case_type,
+#             "AdditionalFields": additional_fields,
+#         }
+#         if unofficial_title:
+#             parameter["UnofficialTitle"] = unofficial_title
+#         if status:
+#             parameter["Status"] = status
+#         if access_code:
+#             parameter["AccessCode"] = access_code
+#         if access_group:
+#             parameter["AccessGroup"] = access_group
+#         if journal_unit:
+#             parameter["JournalUnit"] = journal_unit
+#         if sub_archive:
+#             parameter["SubArchive"] = sub_archive
+#         if external_id:
+#             parameter["ExternalId"] = {"Id": external_id, "Type": external_id_type}
+#         if responsible_person_id_number:
+#             parameter["ResponsiblePersonIdNumber"] = responsible_person_id_number
+#         if responsible_person_recno:
+#             parameter["ResponsiblePersonRecno"] = responsible_person_recno
+#         if responsible_person_email:
+#             parameter["ResponsiblePersonEmail"] = responsible_person_email
+#         if responsible_person_user_id:
+#             parameter["ResponsiblePersonUserId"] = responsible_person_user_id
+#         parameter.update(extra_fields)
+
+#         response = self.post(
+#             f"{self.base_endpoint}/CaseService/CreateCase",
+#             json={"parameter": parameter},
+#         )
+#         return response.json()
+
