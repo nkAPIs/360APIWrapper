@@ -31,6 +31,7 @@ from src.config import get_configuration
 from src.public360_client import Public360AuthError, Public360Client, DocumentCategory,DocumentStatus
 from confighandler.src.configuration import Configuration
 from src.public360_client import AccessGroup, CaseStatus, CaseType
+from src.paragraf3_sager import Beskyttelse, Ejendom, byg_archive_codes, byg_titel, opret_paragraf3_sag
 #from random import *
 from pathlib import Path
 
@@ -124,6 +125,27 @@ def create_case_test(client, filename:str=None):
     check = client.sif_call("CaseService", "GetCases", {"Recno": r["Recno"]})
     print(json.dumps(check, indent=2, ensure_ascii=False)[:2000])
 
+def paragraf3_test(client, create: bool = False):
+    ejendom = Ejendom("Næstvedvej", "25", "1234", "Andeby",
+                      "517k", "Ande By, Dammen", lokalitetsnavn="Moserup")
+    beskyttelser = [Beskyttelse.BESKYTTET_NATUR, Beskyttelse.STEN_OG_JORDDIGE]
+
+    # Dry run: show what would be sent to 360
+    print("Titel:", byg_titel(ejendom, beskyttelser))
+    print("ArchiveCodes:", byg_archive_codes(client, beskyttelser))
+    if not create:
+        return
+
+    me = find_person_recno(client, email="lakas@naestved.dk")
+    r = opret_paragraf3_sag(client, ejendom, beskyttelser, responsible_recno=me)
+    print("Created case:", r.get("CaseNumber"), "Recno:", r.get("Recno"))
+
+    # Read it back to confirm the archive codes landed as expected
+    check = client.sif_call("CaseService", "GetCases", {"Recno": r["Recno"]})
+    case = check["Cases"][0]
+    print(case.get("Title"))
+    print(json.dumps(case.get("ArchiveCodes"), indent=2, ensure_ascii=False))
+
 
 
 # ENVIRONMENTS = {
@@ -204,30 +226,44 @@ def run_test(env_name: str, api_path: str=None) -> int:
     # actually reached 360 and got real data back, not just a 200.
     print(f"[{env_name}] OK - HTTP {response.status_code}")
     print(response.json())
-    
-    
-    find_enterprises(client)
-    
-    
-    get_document_stuff(client) 
 
-    get_cases_test(client)  
-    create_case_test(client)  
-    create_case_test(client, filename="/Users/lakas/git/DataProccesor/README.pdf")
+    paragraf3_test(client, create=True)
 
-    print("********* END TEST **************************")    
-    # res = client.sif_call("CaseService", "GetCases", {"Recno": 804386})
-    # print(json.dumps(res, indent=2, ensure_ascii=False)[:4000])
-    
-    #   # later, look it back up by that same key:
-    # result = client.get_cases(external_id="12300004444", external_id_type="AcmeSystem")
-    result = client.sif_call("CaseService", "GetCases", { 
-                                                         "CaseNumber":"85.15.00-P20-4-21S"
-                                                        })
+    if False:
+        find_enterprises(client)
+        get_document_stuff(client) 
+        get_cases_test(client)  
+        create_case_test(client)  
+        create_case_test(client, filename="/Users/lakas/git/DataProccesor/README.pdf")
+
+        print("********* END TEST **************************")    
+        # res = client.sif_call("CaseService", "GetCases", {"Recno": 804386})
+        # print(json.dumps(res, indent=2, ensure_ascii=False)[:4000])
+        
+        #   # later, look it back up by that same key:
+        # result = client.get_cases(external_id="12300004444", external_id_type="AcmeSystem")
+        result = client.sif_call("CaseService", "GetCases", { 
+                                                            "CaseNumber":"85.15.00-P20-4-21S"
+                                                            })
     # classification codes.
     print("classification codes.#################################################################################")
     res = client.sif_call("SupportService", "GetCodeTableRows",
                {"CodeTableName": "Noark Classification type"})
+    # Show the raw response once so we know the structure
+    print(json.dumps(res, indent=2, ensure_ascii=False)[:1500])
+    
+    print("classification codes.#################################################################################")
+    res = client.sif_call("SupportService", "GetCodeTableRows",
+               {
+                   "CodeTableName": "Noark Classification type",
+                    "Code": "85.15",
+                    "IncludeParentClass": True,
+                    "IncludeSubClasses": True,
+                    "IncludeCustomFields": True
+                }
+            )
+
+
     
     
     # Show the raw response once so we know the structure

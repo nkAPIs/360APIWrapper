@@ -1100,8 +1100,9 @@ class Public360Client:
                     archive_codes, 
                     case_type, 
                     status,
-                    access_code=None, 
-                    external_id=None):
+                    access_code=None,
+                    external_id=None,
+                    sub_archive=None):
         parameter = {
             "Title": title,
             "UnofficialTitle": title,
@@ -1117,8 +1118,11 @@ class Public360Client:
             parameter["AccessCode"] = access_code
         if external_id:
             parameter["ExternalId"] = {"Id": external_id, "Type": "MyIntegration"}
-            
-        return self._create_case(**parameter)    
+        if sub_archive:
+            # Shown as "Hovedgruppe" in the 360 GUI
+            parameter["SubArchive"] = sub_archive
+
+        return self._create_case(**parameter)
 
     def _create_case(self, **parameter) -> dict:
         return self.sif_call("CaseService", "CreateCase", parameter)
