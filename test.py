@@ -34,6 +34,7 @@ from src.public360_client import AccessGroup, CaseStatus, CaseType
 from src.paragraf3_sager import Beskyttelse, Ejendom, byg_archive_codes, byg_titel, opret_paragraf3_sag
 #from random import *
 from pathlib import Path
+from src.udrejse import Udrejse
 
 def get_document_stuff(client):
     doc_result = client.get_document_categories()
@@ -146,7 +147,19 @@ def paragraf3_test(client, create: bool = False):
     print(case.get("Title"))
     print(json.dumps(case.get("ArchiveCodes"), indent=2, ensure_ascii=False))
 
+def find_udrejse_sager(client):
+    udrejse = Udrejse(env="prod", client=client)
+     
+    result = udrejse.get_case_for_citizen("0505864107")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print("*************************************************************'")
+    result = udrejse.get_case_for_citizen("2402832986")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print("*************************************************************'")
+    result = udrejse.get_case_for_citizen("2211125449")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
 
+    print("Done")
 
 # ENVIRONMENTS = {
 #     "test": {
@@ -226,6 +239,10 @@ def run_test(env_name: str, api_path: str=None) -> int:
     # actually reached 360 and got real data back, not just a 200.
     print(f"[{env_name}] OK - HTTP {response.status_code}")
     print(response.json())
+
+
+    find_udrejse_sager(client)
+
 
     paragraf3_test(client, create=True)
 
@@ -365,7 +382,7 @@ def main() -> int:
     # args = parser.parse_args()
 
     # return run_test(args.env, args.api_path)    
-    return run_test("test", api_path=None)
+    return run_test("prod", api_path=None)
 
 
 
