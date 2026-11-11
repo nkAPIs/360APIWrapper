@@ -32,6 +32,7 @@ KLE_GRUPPE_TYPE_KODE = "01.05.XX"  # Naturbeskyttelse
 KLE_GRUPPE = "01.05"
 FACET_TYPE_KODE = "Facet"
 HANDLINGSFACET = "G01"  # Generelle sager
+CASEHANDLER_ROLE = "Yderligere sagsbehandler"  # sagskontakt-rolle
 
 _table_cache: dict[tuple[int, str], list[dict]] = {}
 
@@ -158,13 +159,32 @@ def opret_paragraf3_sag(
     ejendom: Ejendom,
     beskyttelser: list[Beskyttelse],
     responsible_recno: int,
-    case_type: str = "recno:300001",
+    responsible_enterprise_recno: Optional[int] = None,
+    casehandler_recno: Optional[int] = None,
+    case_type: str = "Geosag",
     status: str = "recno:300001",
-    access_code: Optional[str] = None,
+    access_code: Optional[str] = "W",
     external_id: Optional[str] = None,
 ) -> dict:
+    """
+    Args:
+        responsible_recno: Recno på den ansvarlige person.
+        responsible_enterprise_recno: Recno på den ansvarlige enhed/center
+            (fx CKO). Find den med client.get_enterprises(name="CKO").
+            None lader 360 vælge den ansvarlige persons egen enhed.
+        casehandler_recno: Recno på en ekstra sagsbehandler, som tilføjes
+            sagen som kontakt med rollen CASEHANDLER_ROLE.
+        case_type: Sagstype som kode (fx "Geosag") eller "recno:<n>".
+        access_code: Adgangskode som kode - "W" er Weblager.
+    """
     if not beskyttelser:
         raise ValueError("Mindst én beskyttelsestype skal angives.")
+
+    contacts = None
+    if casehandler_recno:
+        contacts = [
+            {"Role": CASEHANDLER_ROLE, "ReferenceNumber": f"recno:{casehandler_recno}"}
+        ]
 
     return client.create_case(
         title=byg_titel(ejendom, beskyttelser),
@@ -175,4 +195,6 @@ def opret_paragraf3_sag(
         access_code=access_code,
         external_id=external_id,
         sub_archive=find_sub_archive(client, KLE_GRUPPE.split(".")[0]),
+        responsible_enterprise_recno=responsible_enterprise_recno,
+        contacts=contacts,
     )

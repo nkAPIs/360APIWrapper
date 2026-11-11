@@ -67,6 +67,7 @@ def find_enterprises(client):
         # sort_criterion: Optional[str] = None,
         # **extra_query,
     )
+    
     print(json.dumps(result, indent=4))
     
 def get_cases_test(client):
@@ -137,8 +138,34 @@ def paragraf3_test(client, create: bool = False):
     if not create:
         return
 
+    enterprise = client.get_enterprises(name="Center for Koncernservice")
+    
+    # persons = client.get_all_persons(active = True, page_size= 2000)
+    # with open("persons.json", "w", encoding="utf-8") as f:
+    #     json.dump(persons, f, indent=4, ensure_ascii=False)
+    
+
     me = find_person_recno(client, email="lakas@naestved.dk")
-    r = opret_paragraf3_sag(client, ejendom, beskyttelser, responsible_recno=me)
+    me2 =  525999
+    
+    # enterprises = client.get_all_enterprises(page_size=1000)
+    # ## save the enterprises to a file for later inspection
+    # with open("enterprises.json", "w", encoding="utf-8") as f:
+    #     json.dump(enterprises, f, indent=4, ensure_ascii=False)
+    # print("Enterprises:", json.dumps(enterprises, indent=2, ensure_ascii=False))
+    
+    r = opret_paragraf3_sag(
+        client=client,
+        ejendom=ejendom,
+        beskyttelser=beskyttelser,
+        responsible_recno=me,
+        responsible_enterprise_recno = enterprise.get("Recno") if enterprise else None,
+        casehandler_recno = me2,
+        case_type = "Geosag",
+        status = "recno:300001",
+        access_code = "W",
+        external_id = None
+    )
     print("Created case:", r.get("CaseNumber"), "Recno:", r.get("Recno"))
 
     # Read it back to confirm the archive codes landed as expected

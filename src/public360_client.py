@@ -1075,6 +1075,68 @@ class Public360Client:
             query["SortCriterion"] = sort_criterion
         query.update(extra_query)
         return self.sif_call("ContactService", "GetEnterprises", query)
+
+    def _get_all_contacts(self, method: str, result_key: str,
+                          active: Optional[bool], page_size: int) -> list[dict]:
+        """Page through a ContactService Get* method with a wildcard name."""
+        rows: list[dict] = []
+        page = 0
+        while True:
+            query: dict = {
+                "Name": "%",
+                "Page": page,
+                "MaxRows": page_size,
+                "SortCriterion": "RecnoAscending",
+            }
+            if active is not None:
+                query["Active"] = active
+            result = self.sif_call("ContactService", method, query)
+            batch = result.get(result_key) or []
+            rows.extend(batch)
+            page += 1
+            if len(batch) < page_size or page >= (result.get("TotalPageCount") or 0):
+                return rows
+
+    def get_all_enterprises(self, active: Optional[bool] = True,
+                            page_size: int = 200) -> list[dict]:
+        """
+        All enterprises / org units as [{"name": ..., "recno": ...}, ...],
+        sorted by name. Names are not unique (e.g. two "CKO Robot"), hence
+        a list rather than one name->recno dict.
+
+        Args:
+            active: True (default) = only active, False = only inactive,
+                None = both. None is slow: the tenant holds ~25,000
+                enterprises, most of them inactive.
+            page_size: Rows fetched per call.
+        """
+        rows = self._get_all_contacts("GetEnterprises", "Enterprises", active, page_size)
+        return sorted(
+            ({"name": r.get("Name"), "recno": r["Recno"]} for r in rows),
+            key=lambda e: (e["name"] or "").lower(),
+        )
+
+    def get_all_persons(self, active: Optional[bool] = True,
+                        page_size: int = 200) -> list[dict]:
+        """
+        All contact persons as [{"name": ..., "recno": ..., "email": ...},
+        ...], sorted by name. The recno can be used as responsible_recno
+        (ResponsiblePersonRecno). See get_all_enterprises for the args.
+        """
+        rows = self._get_all_contacts("GetContactPersons", "ContactPersons", active, page_size)
+        return sorted(
+            (
+                {
+                    "name": " ".join(
+                        p for p in (r.get("FirstName"), r.get("MiddleName"), r.get("LastName")) if p
+                    ),
+                    "recno": r["Recno"],
+                    "email": r.get("Email"),
+                }
+                for r in rows
+            ),
+            key=lambda e: e["name"].lower(),
+        )
     # *****************************************************************************************************************
     # *****************************************************************************************************************
     # *****************************************************************************************************************
@@ -1102,7 +1164,9 @@ class Public360Client:
                     status,
                     access_code=None,
                     external_id=None,
-                    sub_archive=None):
+                    sub_archive=None,
+                    responsible_enterprise_recno=None,
+                    contacts=None):
         parameter = {
             "Title": title,
             "UnofficialTitle": title,
@@ -1121,6 +1185,12 @@ class Public360Client:
         if sub_archive:
             # Shown as "Hovedgruppe" in the 360 GUI
             parameter["SubArchive"] = sub_archive
+        if responsible_enterprise_recno:
+            parameter["ResponsibleEnterpriseRecno"] = responsible_enterprise_recno
+        if contacts:
+            # List of CaseContactParameter dicts, e.g.
+            # {"Role": "Yderligere sagsbehandler", "ReferenceNumber": "recno:123"}
+            parameter["Contacts"] = contacts
 
         return self._create_case(**parameter)
 
