@@ -147,8 +147,8 @@ def paragraf3_test(client, create: bool = False):
     print(case.get("Title"))
     print(json.dumps(case.get("ArchiveCodes"), indent=2, ensure_ascii=False))
 
-def find_udrejse_sager(client):
-    udrejse = Udrejse(env="prod", client=client)
+def find_udrejse_sager(client, env: str = "prod"):
+    udrejse = Udrejse(env=env, client=client)
      
     result = udrejse.get_case_for_citizen("0505864107")
     print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -180,7 +180,21 @@ def find_udrejse_sager(client):
 # Adjust with --api-path if AccessGroupService is not enabled on the
 # endpoint configured in 360 web admin.
 # DEFAULT_API_PATH = "/Biz/v2/api/call/SI.Data.RPC/SI.Data.RPC/AccessGroupService/GetAccessGroups"
+def revoke_make_new_token(env_name: str, json_file:str=None) -> int:
+    print(f"revoking and re-bootstrapping offline token for {env_name}...")
+    return 1
 
+    config = get_configuration(debugmode=True if env_name == "test" else False)
+
+    client = Public360Client(
+        realm_url=config.realm_url,      # must be the realm the token was issued in
+        client_id=config.client_id,
+        tenant_host=config.tenant_host,
+        token_storage_path=json_file
+    )
+    client.revoke()
+    client.bootstrap()
+    return 0
 
 def run_test(env_name: str, api_path: str=None) -> int:
     # Step 1: look up the realm/client/tenant config for the chosen
@@ -200,7 +214,6 @@ def run_test(env_name: str, api_path: str=None) -> int:
         token=config.token
         #token_storage_path=config.token_storage_path,
     )
-
     print(f"[{env_name}] realm: {config.realm_url}")
     print(f"[{env_name}] client_id: {config.client_id}")
     print(f"[{env_name}] tenant: {config.tenant_host}")
@@ -241,7 +254,7 @@ def run_test(env_name: str, api_path: str=None) -> int:
     print(response.json())
 
 
-    find_udrejse_sager(client)
+    find_udrejse_sager(client, env=env_name)
 
 
     paragraf3_test(client, create=True)
@@ -382,9 +395,10 @@ def main() -> int:
     # args = parser.parse_args()
 
     # return run_test(args.env, args.api_path)    
-    return run_test("prod", api_path=None)
+    return run_test("test", api_path=None)
 
 
 
 if __name__ == "__main__":
+    #raise SystemExit(revoke_make_new_token(env_name="prod", json_file="./naestved-prod-offline-token.local.json"))
     raise SystemExit(main())
