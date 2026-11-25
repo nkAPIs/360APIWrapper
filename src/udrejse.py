@@ -45,6 +45,18 @@ class Udrejse:
                 return True
         return False
 
+    def citizens_open_case_number(
+        self,
+        cpr: str
+    )->str:
+        result = self.get_case_for_citizen(cpr=cpr)
+        if not result:
+            return None
+        for case in result['Cases']:
+            if case["Title"] == "NBB - Udrejse" and case["Status"] == "Aktiv":
+                return case["CaseNumber"]
+        return None
+
     def get_case_for_citizen(
         self,
         cpr: str,
