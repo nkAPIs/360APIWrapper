@@ -1,0 +1,123 @@
+{
+  "parameter": {
+    "ClosedDate": "2026-10-29T08:31:18.492Z",
+    "CaseType": "string",
+    "DefaultValueSet": "string",
+    "ADContextUser": "string",
+    "ExternalId": {
+      "Id": "string",
+      "Type": "string",
+      "ExternalName": "string"
+    },
+    "Title": "string",
+    "UnofficialTitle": "string",
+    "Status": "string",
+    "StartDate": "2026-10-29T08:31:18.492Z",
+    "JournalUnit": "string",
+    "SubArchive": "string",
+    "ArchiveCodes": [
+      {
+        "ArchiveCode": "string",
+        "ArchiveType": "string",
+        "Sort": 0,
+        "IsManualText": true
+      }
+    ],
+    "FiledOnPaper": true,
+    "Keywords": [
+      "string"
+    ],
+    "AccessCode": "string",
+    "Paragraph": "string",
+    "AccessGroup": "string",
+    "Notes": "string",
+    "ResponsibleEnterpriseRecno": 0,
+    "ResponsibleEnterpriseNumber": "string",
+    "ResponsiblePersonRecno": 0,
+    "ResponsiblePersonIdNumber": "string",
+    "ResponsiblePersonEmail": "string",
+    "ResponsiblePersonUserId": "string",
+    "Remarks": [
+      {
+        "Title": "string",
+        "Content": "string",
+        "RemarkType": "string"
+      }
+    ],
+    "Contacts": [
+      {
+        "Role": "string",
+        "ExternalId": "string",
+        "ReferenceNumber": "string",
+        "IsUnofficial": true,
+        "ContactId": "string",
+        "SubjectArea": "string",
+        "Notes": "string",
+        "ActionClass": "string"
+      }
+    ],
+    "UnregisteredContacts": [
+      {
+        "Role": "string",
+        "IsUnofficial": true,
+        "ContactName": "string",
+        "ContactCompanyName": "string",
+        "ReferenceNumber": "string",
+        "Address": "string",
+        "Country": "string",
+        "MobilePhone": "string",
+        "Phone": "string",
+        "Email": "string",
+        "State": "string",
+        "ZipCode": "string",
+        "ZipPlace": "string",
+        "Notes": "string"
+      }
+    ],
+    "Project": "string",
+    "ScrapCode": "string",
+    "ReferringCases": [
+      "string"
+    ],
+    "Category": "string",
+    "Estates": [
+      {
+        "Recno": 0,
+        "ExternalId": "string"
+      }
+    ],
+    "AdditionalFields": [
+      {
+        "Name": "string",
+        "Value": "string",
+        "OperatorType": {
+          "Value": "string"
+        }
+      }
+    ],
+    "ProgressPlanId": "string",
+    "Permissions": [
+      {
+        "AccessGroup": "string",
+        "ContactExternalId": "string",
+        "AccessLevel": "Read",
+        "Grant": true,
+        "ViewFile": true,
+        "InsertFile": true,
+        "ModifyFile": true,
+        "InsertRev": true,
+        "ModifyRev": true,
+        "InsertDoc": true,
+        "Reference": "string"
+      }
+    ],
+    "AdditionalListFields": [
+      {
+        "Name": "string",
+        "Value": {}
+      }
+    ],
+    "eArchiveXMLFragment": "string",
+    "ImportedCaseNumber": "string"
+  }
+}

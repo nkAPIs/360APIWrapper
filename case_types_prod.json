@@ -1,0 +1,86 @@
+[
+    {
+        "name": "(TEST BRUG IKKE) Administrativsag",
+        "recno": 500160
+    },
+    {
+        "name": "Administrativsag",
+        "recno": 300001
+    },
+    {
+        "name": "Aktindsigt",
+        "recno": 15
+    },
+    {
+        "name": "BHS sag",
+        "recno": 500125
+    },
+    {
+        "name": "BOM Byggesag",
+        "recno": 500097
+    },
+    {
+        "name": "BOM Miljøsag",
+        "recno": 500098
+    },
+    {
+        "name": "BOM Natursag ",
+        "recno": 500099
+    },
+    {
+        "name": "BOM Plansag",
+        "recno": 500100
+    },
+    {
+        "name": "BOM Åben land sag",
+        "recno": 500193
+    },
+    {
+        "name": "Borgersag",
+        "recno": 300003
+    },
+    {
+        "name": "Byggesag",
+        "recno": 300004
+    },
+    {
+        "name": "Elev",
+        "recno": 500053
+    },
+    {
+        "name": "Geosag",
+        "recno": 500049
+    },
+    {
+        "name": "Lokalplan",
+        "recno": 500110
+    },
+    {
+        "name": "Miljøsag",
+        "recno": 500050
+    },
+    {
+        "name": "Natursag ",
+        "recno": 500051
+    },
+    {
+        "name": "Personalesag",
+        "recno": 300002
+    },
+    {
+        "name": "Plansag",
+        "recno": 500058
+    },
+    {
+        "name": "PPRsag",
+        "recno": 300005
+    },
+    {
+        "name": "Virksomhedssag",
+        "recno": 300207
+    },
+    {
+        "name": "Åben land sag",
+        "recno": 500101
+    }
+]
