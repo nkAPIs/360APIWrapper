@@ -113,6 +113,36 @@ class Ejendom:
     matrikelnummer: str  # hovedhusmatriklen, fx "517k"
     ejerlav: str  # fx "Næstved By, Næstved"
     lokalitetsnavn: Optional[str] = None
+    # Angives bfe_nummer, knyttes ejendommen til sagen (se find_or_create_estate).
+    bfe_nummer: Optional[int] = None
+    ejendomstype: str = "SFE"  # kode i "code table: Estate type": SFE, BPFG, Ejerlejlighed, BPV
+
+
+def find_or_create_estate(client: Public360Client, ejendom: Ejendom) -> int:
+    """
+    Find ejendommen i 360 ud fra BFE-nummer og returnér dens Recno. Findes
+    den ikke, oprettes den med BFE-nummer, adresse og ejendomstype.
+
+    360 gemmer BFE-nummeret i feltet BuildingNumber. Eksisterende ejendomme
+    har intet ExternalId, så der søges på BuildingNumber for ikke at oprette
+    dubletter; nye ejendomme får BFE-nummeret som ExternalID.
+    """
+    found = client.get_estates(BuildingNumber=ejendom.bfe_nummer).get("Estates") or []
+    if found:
+        return found[0]["Recno"]
+
+    result = client.synchronize_estate(
+        external_id=str(ejendom.bfe_nummer),
+        Type=ejendom.ejendomstype,
+        BuildingNumber=ejendom.bfe_nummer,
+        Address={
+            "StreetAddress": f"{ejendom.vejnavn} {ejendom.husnummer}",
+            "ZipCode": ejendom.postnummer,
+            "ZipPlace": ejendom.by,
+            "Country": "DNK",
+        },
+    )
+    return result["Recno"]
 
 
 def byg_titel(ejendom: Ejendom, beskyttelser: Iterable[Beskyttelse]) -> str:
@@ -186,6 +216,10 @@ def opret_paragraf3_sag(
             {"Role": CASEHANDLER_ROLE, "ReferenceNumber": f"recno:{casehandler_recno}"}
         ]
 
+    estate_recnos = None
+    if ejendom.bfe_nummer:
+        estate_recnos = [find_or_create_estate(client, ejendom)]
+
     return client.create_case(
         title=byg_titel(ejendom, beskyttelser),
         responsible_recno=responsible_recno,
@@ -197,4 +231,5 @@ def opret_paragraf3_sag(
         sub_archive=find_sub_archive(client, KLE_GRUPPE.split(".")[0]),
         responsible_enterprise_recno=responsible_enterprise_recno,
         contacts=contacts,
+        estate_recnos=estate_recnos,
     )

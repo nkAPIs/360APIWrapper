@@ -33,10 +33,22 @@ class Udrejse:
             )
         self.client = client
 
+    def citizens_has_open_case(
+        self,
+        cpr: str
+    )->bool:
+        result = self.get_case_for_citizen(cpr=cpr)
+        if not result:
+            return False
+        for case in result['Cases']:
+            if case["Title"] == "NBB - Udrejse" and case["Status"] == "Aktiv":
+                return True
+        return False
+
     def get_case_for_citizen(
         self,
         cpr: str,
-        case_type: Optional[Union[str, CaseType]] = "Borgersag",
+        case_type: Optional[Union[str, CaseType]] = CaseType.CITIZEN_CASE,
         title_contains: Optional[str] = "Udrejse",
     ) -> dict:
         """

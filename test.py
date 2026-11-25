@@ -126,10 +126,67 @@ def create_case_test(client, filename:str=None):
 
     check = client.sif_call("CaseService", "GetCases", {"Recno": r["Recno"]})
     print(json.dumps(check, indent=2, ensure_ascii=False)[:2000])
+def find_something(client):
+    # persons = client.get_all_persons(active = True, page_size= 2000)
+    # with open("persons_prod.json", "w", encoding="utf-8") as f:
+    #      json.dump(persons, f, indent=4, ensure_ascii=False)
 
+
+    # enterprises = client.get_all_enterprises(page_size=400)
+    # ## save the enterprises to a file for later inspection
+    # with open("enterprises_prod.json", "w", encoding="utf-8") as f:
+    #     json.dump(enterprises, f, indent=4, ensure_ascii=False)
+
+    case_types = client.get_all_case_types()
+    with open("case_types_prod.json", "w", encoding="utf-8") as f:
+        json.dump(case_types, f, indent=4, ensure_ascii=False)
+
+    print("find_something done")
+    
+    
 def paragraf3_test(client, create: bool = False):
-    ejendom = Ejendom("Næstvedvej", "25", "1234", "Andeby",
-                      "517k", "Ande By, Dammen", lokalitetsnavn="Moserup")
+    ejendom = Ejendom(
+        vejnavn = "Nævervejen",
+        husnummer = "25",
+        postnummer = "4700",
+        by = "Næstved",
+        matrikelnummer = "517k",
+        ejerlav = "Næstved By, Næstved",
+        lokalitetsnavn="Moserup",
+        # Angives bfe_nummer, knyttes ejendommen til sagen (se find_or_create_estate).
+        bfe_nummer=9074628,
+        ejendomstype = "SFE"
+    )# kode i "code table: Estate type": SFE, BPFG, Ejerlejlighed, BPV
+
+                # # # # {
+                # # # # "id": "169cbf6f3a7848cdeabc718a2bfd9eed53b6e5fb177ebb58e871e510a0a898d1",
+                # # # # "EjerType": "Person",
+                # # # # "temanavn": [
+                # # # #     {
+                # # # #     "emnenr": "01.05.08",
+                # # # #     "filnavn": "Paragraf3Natur\\tmp\\9074628_Beskyttede naturtyper_179369855210984.jpg",
+                # # # #     "temanavn": "Beskyttede naturtyper"
+                # # # #     },
+                # # # #     {
+                # # # #     "emnenr": "01.05.25",
+                # # # #     "filnavn": "Paragraf3Natur\\tmp\\9074628_Beskyttede sten- og jorddiger_17936985549864.jpg",
+                # # # #     "temanavn": "Beskyttede sten- og jorddiger"
+                # # # #     }
+                # # # # ],
+                # # # # "bfe_nummer": 9074628,
+                # # # # "NavnJusteret": "Peter Strandgaard",
+                # # # # "EjerensStatus": "bopael_i_danmark",
+                # # # # "EjerStatusKode_T": "Hovedejer",
+                # # # # "json_featuretype": "nye_ejere",
+                # # # # "overtagelsesdato": "20260901",
+                # # # # "matnr_ejerlavsnavn": "6a, Saltø By, Vallensved",
+                # # # # "EjersAdresseDanmark": "Saltøvej 95, Saltø By, 4700 Næstved",
+                # # # # "EjendePersonPersonNR": "2903650411",
+                # # # # "EjendeVirksomhedCVRnr": null
+                # # # # }
+    
+    
+    
     beskyttelser = [Beskyttelse.BESKYTTET_NATUR, Beskyttelse.STEN_OG_JORDDIGE]
 
     # Dry run: show what would be sent to 360
@@ -140,19 +197,8 @@ def paragraf3_test(client, create: bool = False):
 
     enterprise = client.get_enterprises(name="Center for Koncernservice")
     
-    # persons = client.get_all_persons(active = True, page_size= 2000)
-    # with open("persons.json", "w", encoding="utf-8") as f:
-    #     json.dump(persons, f, indent=4, ensure_ascii=False)
-    
-
     me = find_person_recno(client, email="lakas@naestved.dk")
     me2 =  525999
-    
-    # enterprises = client.get_all_enterprises(page_size=1000)
-    # ## save the enterprises to a file for later inspection
-    # with open("enterprises.json", "w", encoding="utf-8") as f:
-    #     json.dump(enterprises, f, indent=4, ensure_ascii=False)
-    # print("Enterprises:", json.dumps(enterprises, indent=2, ensure_ascii=False))
     
     r = opret_paragraf3_sag(
         client=client,
@@ -177,13 +223,27 @@ def paragraf3_test(client, create: bool = False):
 def find_udrejse_sager(client, env: str = "prod"):
     udrejse = Udrejse(env=env, client=client)
      
-    result = udrejse.get_case_for_citizen("0505864107")
+    result = udrejse.get_case_for_citizen(
+        cpr = "0505864107",
+        case_type = CaseType.CITIZEN_CASE,
+        title_contains = "Udrejse",
+    )
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    
+    print("*************************************************************'")
+    result = udrejse.get_case_for_citizen(
+        cpr = "2402832986",
+        case_type = CaseType.CITIZEN_CASE,
+        title_contains = "Udrejse",
+    )
     print(json.dumps(result, indent=2, ensure_ascii=False))
     print("*************************************************************'")
-    result = udrejse.get_case_for_citizen("2402832986")
-    print(json.dumps(result, indent=2, ensure_ascii=False))
-    print("*************************************************************'")
-    result = udrejse.get_case_for_citizen("2211125449")
+    
+    result = udrejse.get_case_for_citizen(
+        cpr = "2211125449",
+        case_type = CaseType.CITIZEN_CASE,
+        title_contains = "Udrejse",
+    )
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
     print("Done")
@@ -222,7 +282,22 @@ def revoke_make_new_token(env_name: str, json_file:str=None) -> int:
     client.revoke()
     client.bootstrap()
     return 0
+def make_new_token(env_name: str, json_file:str=None, revoke_old:bool=False) -> int:
+    print(f"revoking and re-bootstrapping offline token for {env_name}...")
 
+    config = get_configuration(debugmode=True if env_name == "test" else False)
+
+    client = Public360Client(
+        realm_url=config.realm_url,      # must be the realm the token was issued in
+        client_id=config.client_id,
+        tenant_host=config.tenant_host,
+        token_storage_path=json_file
+    )
+    if revoke_old:
+        client.revoke()
+        
+    client.bootstrap()
+    return 0
 def run_test(env_name: str, api_path: str=None) -> int:
     # Step 1: look up the realm/client/tenant config for the chosen
     # environment (ENVIRONMENTS above) and build a client around it.
@@ -279,6 +354,9 @@ def run_test(env_name: str, api_path: str=None) -> int:
     # actually reached 360 and got real data back, not just a 200.
     print(f"[{env_name}] OK - HTTP {response.status_code}")
     print(response.json())
+
+    find_something(client)
+
 
 
     find_udrejse_sager(client, env=env_name)
@@ -422,10 +500,10 @@ def main() -> int:
     # args = parser.parse_args()
 
     # return run_test(args.env, args.api_path)    
-    return run_test("test", api_path=None)
+    return run_test("prod", api_path=None)
 
 
 
 if __name__ == "__main__":
-    #raise SystemExit(revoke_make_new_token(env_name="prod", json_file="./naestved-prod-offline-token.local.json"))
+    #raise SystemExit(make_new_token(env_name="test", json_file="./naestved-parrob-test-offline-token.local.json"))
     raise SystemExit(main())

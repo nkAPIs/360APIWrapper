@@ -48,40 +48,42 @@ class CaseType(str, Enum):
     Active values of the Naestved 360 tenant's "Case type" code table, for
     use as the `case_type` argument to
     Public360Client.create_case()/get_cases(). Values are "recno:<n>"
-    rather than the Code string, since Code is not guaranteed unique
-    (e.g. two rows are both coded "BOM Byggesag" here).
+    rather than the Code string, since Code is not guaranteed unique.
 
-    Fetched live via client.get_code_table_rows("code table: Case type")
-    against the naestved prod tenant on 2026-10-05. This list is
-    tenant-specific and can change when 360 admin reconfigures the code
-    table - re-run that call to refresh it if case_type lookups start
-    failing.
+    Fetched live via client.get_all_case_types() against the naestved
+    prod tenant on 2026-11-16 (case_types_prod.json). The test tenant
+    uses other recnos for some types, so there prefer the code name
+    (e.g. "Geosag") over these members.
+
+    This list is tenant-specific and can change when 360 admin
+    reconfigures the code table - re-run that call to refresh it if
+    case_type lookups start failing.
 
     Note: the generic SIF-docs default, recno 2 ("Sak"/"Case"), is
     expired in this tenant and intentionally not included below.
     """
 
-    ACCESS_REQUEST = "recno:15"  # "Access request"
-    ADMINISTRATIVE_CASE = "recno:300001"  # "Administrative Case"
-    EMPLOYEE_CASE = "recno:300002"  # "Employee Case"
-    CITIZEN_CASE = "recno:300003"  # "Citizen Case"
-    GEO_CASE = "recno:300004"  # "Geo Case"
-    PPR_CASE = "recno:300005"  # "PPR Case"
+    ACCESS_REQUEST = "recno:15"  # "Aktindsigt"
+    ADMINISTRATIVE_CASE = "recno:300001"  # "Administrativsag"
+    EMPLOYEE_CASE = "recno:300002"  # "Personalesag"
+    CITIZEN_CASE = "recno:300003"  # "Borgersag"
+    BYGGESAG = "recno:300004"  # "Byggesag"
+    PPR_CASE = "recno:300005"  # "PPRsag"
     VIRKSOMHEDSSAG = "recno:300207"  # "Virksomhedssag"
     GEOSAG = "recno:500049"  # "Geosag"
     MILJOSAG = "recno:500050"  # "Miljøsag"
-    NATURSAG = "recno:500051"  # "Natursag"
+    NATURSAG = "recno:500051"  # "Natursag "
     ELEV = "recno:500053"  # "Elev"
-    GEOSAG_KLON = "recno:500058"  # "Geosag Klon"
+    PLANSAG = "recno:500058"  # "Plansag"
     BOM_BYGGESAG = "recno:500097"  # "BOM Byggesag"
     BOM_MILJOSAG = "recno:500098"  # "BOM Miljøsag"
-    BOM_NATURSAG = "recno:500099"  # "BOM Natursag"
+    BOM_NATURSAG = "recno:500099"  # "BOM Natursag "
     BOM_PLANSAG = "recno:500100"  # "BOM Plansag"
     AABEN_LAND_SAG = "recno:500101"  # "Åben land sag"
     LOKALPLAN = "recno:500110"  # "Lokalplan"
     BHS_SAG = "recno:500125"  # "BHS sag"
-    ADMINISTRATIVSAG = "recno:500160"  # "Administrativsag"
-    BOM_BYGGESAG_500193 = "recno:500193"  # "BOM Byggesag" (second row with this code)
+    TEST_BRUG_IKKE_ADMINISTRATIVSAG = "recno:500160"  # "(TEST BRUG IKKE) Administrativsag"
+    BOM_AABEN_LAND_SAG = "recno:500193"  # "BOM Åben land sag"
 
 
 class AccessGroup(str, Enum):
@@ -409,7 +411,7 @@ class Public360Client:
         base_endpoint: str = "/Biz/v2/api/call/SI.Data.RPC/SI.Data.RPC",
         token_storage_path: str = "./fk-api-offline-token.local.json",
         token:str = None,
-        timeout: float = 30.0,
+        timeout: float = 60.0,
     ):
         self.realm_url = realm_url.rstrip("/")
         self.client_id = client_id
@@ -676,6 +678,28 @@ class Public360Client:
             json={"parameter": query},
         )
         return response.json()
+
+    def get_all_case_types(self, active: Optional[bool] = True) -> list[dict]:
+        """
+        All case types as [{"name": ..., "recno": ...}, ...], sorted by
+        name, from the "Case type" code table. Use the name (e.g.
+        "Geosag") or "recno:<recno>" as case_type.
+
+        Args:
+            active: True (default) = only active, False = only expired,
+                None = both.
+        """
+        result = self.get_code_table_rows(
+            "code table: Case type", include_expired_values=True
+        )
+        return sorted(
+            (
+                {"name": r.get("Code"), "recno": r["Recno"]}
+                for r in result.get("CodeTableRows", [])
+                if active is None or r.get("IsExpired") != active
+            ),
+            key=lambda e: (e["name"] or "").lower(),
+        )
 
     def get_document_categories(
         self, include_expired_values: bool = False
@@ -1076,6 +1100,36 @@ class Public360Client:
         query.update(extra_query)
         return self.sif_call("ContactService", "GetEnterprises", query)
 
+    # ------------------------------------------------------------------
+    # EstateService
+    # ------------------------------------------------------------------
+    def get_estates(self, **query) -> dict:
+        """
+        Search estates (ejendomme) via EstateService/GetEstates. Pass
+        GetEstatesParameter fields as keyword arguments, e.g.
+        BuildingNumber=2528137 (holds the BFE number in this tenant),
+        Recno=..., ExternalID=... or Address={"ZipCode": "4700"}.
+
+        Returns the GetEstatesResult, e.g. {"Estates": [...],
+        "TotalCount": ...}.
+        """
+        return self.sif_call("EstateService", "GetEstates", query)
+
+    def synchronize_estate(self, external_id: str, **parameter) -> dict:
+        """
+        Create or update an estate via EstateService/SynchronizeEstate,
+        identified by external_id: an estate with that ExternalID is
+        updated, otherwise a new one is created. Other
+        SynchronizeEstateParameter fields (Type, Address, BuildingNumber,
+        Description, ...) are passed as keyword arguments.
+
+        Returns the SynchronizeEstateResult, e.g. {"Recno": ..., ...}.
+        """
+        return self.sif_call(
+            "EstateService", "SynchronizeEstate",
+            {"ExternalID": external_id, **parameter},
+        )
+
     def _get_all_contacts(self, method: str, result_key: str,
                           active: Optional[bool], page_size: int) -> list[dict]:
         """Page through a ContactService Get* method with a wildcard name."""
@@ -1166,7 +1220,8 @@ class Public360Client:
                     external_id=None,
                     sub_archive=None,
                     responsible_enterprise_recno=None,
-                    contacts=None):
+                    contacts=None,
+                    estate_recnos=None):
         parameter = {
             "Title": title,
             "UnofficialTitle": title,
@@ -1191,6 +1246,9 @@ class Public360Client:
             # List of CaseContactParameter dicts, e.g.
             # {"Role": "Yderligere sagsbehandler", "ReferenceNumber": "recno:123"}
             parameter["Contacts"] = contacts
+        if estate_recnos:
+            # Estates (ejendomme) linked to the case, see get_estates()
+            parameter["Estates"] = [{"Recno": r} for r in estate_recnos]
 
         return self._create_case(**parameter)
 

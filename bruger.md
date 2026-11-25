@@ -192,7 +192,7 @@ from src.public360_client import CaseType
 CaseType.ADMINISTRATIVE_CASE   # "recno:300001"
 CaseType.EMPLOYEE_CASE         # "recno:300002"
 CaseType.CITIZEN_CASE          # "recno:300003"
-CaseType.GEO_CASE              # "recno:300004"
+CaseType.BYGGESAG              # "recno:300004"
 CaseType.BOM_BYGGESAG           # "recno:500097"
 # ... se klassen for alle 21 medlemmer
 ```
