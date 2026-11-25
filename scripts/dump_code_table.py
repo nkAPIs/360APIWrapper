@@ -16,8 +16,8 @@ Usage:
 import argparse
 import sys
 
-from src.config import get_configuration
-from src.public360_client import Public360AuthError, Public360Client
+from public360.src.config import get_configuration
+from public360.src.public360_client import Public360AuthError, Public360Client
 
 
 def main() -> int:

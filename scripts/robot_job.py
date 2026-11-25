@@ -12,7 +12,7 @@ Kør fra repo-roden, fx via cron/scheduler:
 
 import sys
 
-from src.public360_client import Public360AuthError, Public360Client
+from public360.src.public360_client import Public360AuthError, Public360Client
 
 # Skal matche de værdier bootstrap blev kørt med.
 REALM_URL = "https://keycloak.360online.com/realms/<customer-realm>"

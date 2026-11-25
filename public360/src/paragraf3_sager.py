@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Iterable, Optional
 
-from src.public360_client import Public360Client
+from public360.src.public360_client import Public360Client
 
 CLASSIFICATION_TYPE_TABLE = "Noark Classification type"
 CLASSIFICATION_CODE_TABLE = "Noark Classification code"

@@ -6,8 +6,8 @@ Opslag af borgersager i 360 ud fra CPR-nummer.
 
 from typing import Optional, Union
 
-from src.config import get_configuration
-from src.public360_client import CaseType, Public360Client
+from public360.src.config import get_configuration
+from public360.src.public360_client import CaseType, Public360Client
 
 
 class Udrejse:

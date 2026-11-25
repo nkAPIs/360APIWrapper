@@ -1,14 +1,14 @@
 import sys
 from xmlrpc import client
 import json
-from src.config import get_configuration
-from src.public360_client import Public360AuthError, Public360Client, DocumentCategory,DocumentStatus
+from public360.src.config import get_configuration
+from public360.src.public360_client import Public360AuthError, Public360Client, DocumentCategory,DocumentStatus
 from confighandler.src.configuration import Configuration
-from src.public360_client import AccessGroup, CaseStatus, CaseType
-from src.paragraf3_sager import Beskyttelse, Ejendom, byg_archive_codes, byg_titel, opret_paragraf3_sag
+from public360.src.public360_client import AccessGroup, CaseStatus, CaseType
+from public360.src.paragraf3_sager import Beskyttelse, Ejendom, byg_archive_codes, byg_titel, opret_paragraf3_sag
 #from random import *
 from pathlib import Path
-from src.udrejse import Udrejse
+from public360.src.udrejse import Udrejse
 
 def find_person_recno(client, email:str=None, name:str=None):
     if not email and not name:

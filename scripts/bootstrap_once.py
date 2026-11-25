@@ -13,7 +13,7 @@ Kør fra repo-roden:
     uv run python scripts/bootstrap_once.py
 """
 
-from src.public360_client import Public360Client
+from public360.src.public360_client import Public360Client
 
 # Udfyld med værdierne fra Tieto og jeres eget tenant - se AUTHENTICATE.md.
 REALM_URL = "https://keycloak.360online.com/realms/<customer-realm>"
